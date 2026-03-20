@@ -28,16 +28,20 @@
 }
 html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;transition:background .3s,color .3s;}
 
-/* ── HEADER ── */
-header{height:var(--hh);padding:0 1.25rem;display:flex;align-items:center;justify-content:space-between;background:var(--surface);border-bottom:1px solid var(--border);transition:background .3s,border-color .3s;flex-shrink:0;position:relative;z-index:20;}
+/* ── HEADER (shared) ── */
+header{
+  height:var(--hh);padding:0 1.25rem;
+  display:flex;align-items:center;justify-content:space-between;
+  background:var(--surface);border-bottom:1px solid var(--border);
+  transition:background .3s,border-color .3s;
+  position:sticky;top:0;z-index:200;flex-shrink:0;
+}
 .hl{display:flex;align-items:baseline;gap:.6rem;}
 header h1{font-size:1.15rem;font-weight:800;letter-spacing:-.03em;white-space:nowrap;}
 header h1 span{color:var(--accent);transition:color .3s;}
 header sub{font-family:'DM Mono',monospace;font-size:.52rem;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;display:none;}
 @media(min-width:640px){header sub{display:block;}}
 .hr{display:flex;align-items:center;gap:.75rem;}
-
-/* Theme toggle */
 .thm{display:flex;align-items:center;gap:5px;}
 .tl{font-family:'DM Mono',monospace;font-size:.56rem;color:var(--muted);white-space:nowrap;transition:color .3s;}
 .tl.on{color:var(--text);}
@@ -49,7 +53,7 @@ header sub{font-family:'DM Mono',monospace;font-size:.52rem;color:var(--muted);l
 [data-theme="light"] .tth{transform:translateX(16px);background:#1a1a1a;}
 
 /* ════════════════════════════════════
-   DESKTOP  ≥768px  — DO NOT TOUCH
+   DESKTOP ≥768px — DO NOT TOUCH
 ════════════════════════════════════ */
 .desk{display:none;height:calc(100vh - var(--hh));}
 @media(min-width:768px){
@@ -57,8 +61,6 @@ header sub{font-family:'DM Mono',monospace;font-size:.52rem;color:var(--muted);l
   .desk{display:flex;}
   .mob{display:none!important;}
 }
-
-/* sidebar */
 .sb{width:280px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);padding:1.1rem;overflow-y:auto;display:flex;flex-direction:column;gap:1.1rem;transition:background .3s,border-color .3s;}
 .slbl{font-family:'DM Mono',monospace;font-size:.57rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:.3rem;}
 .stabs{display:flex;gap:4px;margin-bottom:8px;}
@@ -116,8 +118,6 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;heigh
 .runb:disabled{opacity:.35;cursor:not-allowed;transform:none;}
 .outb{width:100%;padding:.52rem;background:transparent;color:var(--text);border:1px solid var(--border);border-radius:8px;font-family:'DM Mono',monospace;font-size:.6rem;cursor:pointer;letter-spacing:.06em;text-transform:uppercase;transition:border-color .2s,color .2s;}
 .outb:hover{border-color:var(--accent2);color:var(--accent2);}
-
-/* output */
 .op{flex:1;display:flex;flex-direction:column;overflow:hidden;}
 .otb{padding:.5rem 1.2rem;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:6px;flex-wrap:wrap;background:var(--surface);transition:background .3s,border-color .3s;flex-shrink:0;}
 .otb>span:first-child{font-family:'DM Mono',monospace;font-size:.58rem;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;}
@@ -140,50 +140,94 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;heigh
 .ph p{font-family:'DM Mono',monospace;font-size:.63rem;text-align:center;line-height:2;}
 
 /* ════════════════════════════════════
-   MOBILE  <768px  — STEP FLOW
+   MOBILE <768px
+   Full-height flex column:
+   header (sticky) → scrollable content → static bottom bar
 ════════════════════════════════════ */
-.mob{display:flex;flex-direction:column;height:calc(100vh - var(--hh));background:var(--bg);}
+.mob{
+  display:flex;
+  flex-direction:column;
+  /* fill exactly the remaining viewport below the sticky header */
+  height:calc(100vh - var(--hh));
+  overflow:hidden;
+}
 
-/* step pages */
-.mpgs{flex:1;overflow:hidden;position:relative;}
+/* scrollable step area */
+.mpgs{
+  flex:1;
+  overflow:hidden;
+  position:relative;
+  /* contain the absolutely positioned pages */
+}
+
+/* each step page fills the scroll area */
 .mpg{
-  position:absolute;inset:0;overflow-y:auto;
-  display:flex;flex-direction:column;padding:1.2rem;gap:1rem;
-  background:var(--bg);
-  opacity:0;pointer-events:none;
-  transform:translateX(40px);
-  transition:opacity .2s ease,transform .2s ease;
+  position:absolute;
+  inset:0;
+  overflow-y:auto;
   -webkit-overflow-scrolling:touch;
+  display:flex;
+  flex-direction:column;
+  padding:1.2rem 1.2rem 1.4rem;
+  gap:1rem;
+  background:var(--bg);
+  /* animated in/out */
+  opacity:0;
+  pointer-events:none;
+  transform:translateX(40px);
+  transition:opacity .2s ease, transform .2s ease;
 }
 .mpg.act{opacity:1;pointer-events:auto;transform:translateX(0);}
-.mpg.prev{opacity:0;transform:translateX(-40px);}
+.mpg.prev{opacity:0;transform:translateX(-40px);pointer-events:none;}
 
-/* nav bar */
+/* ── STATIC BOTTOM NAV ── */
 .mnav{
-  display:flex;align-items:center;justify-content:space-between;
-  padding:.7rem 1rem;background:var(--surface);border-top:1px solid var(--border);
-  flex-shrink:0;gap:.5rem;
-  padding-bottom:max(.7rem,env(safe-area-inset-bottom));
+  flex-shrink:0;           /* never squished */
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:.75rem 1.1rem;
+  padding-bottom:max(.75rem, env(safe-area-inset-bottom));
+  background:var(--surface);
+  border-top:1px solid var(--border);
+  gap:.5rem;
+  transition:background .3s,border-color .3s;
+  /* keep above page content */
+  position:relative;
+  z-index:10;
 }
 .mdots{display:flex;gap:5px;}
 .mdot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:background .25s,width .25s,border-radius .25s;}
 .mdot.act{width:20px;border-radius:4px;background:var(--accent);}
 .mbk,.mnxt{
-  padding:.55rem 1.15rem;border-radius:8px;cursor:pointer;font-family:'DM Mono',monospace;
-  font-size:.7rem;letter-spacing:.04em;text-transform:uppercase;transition:all .15s;
-  border:1px solid var(--border);background:transparent;color:var(--muted);
-  white-space:nowrap;touch-action:manipulation;min-width:72px;text-align:center;
+  padding:.6rem 1.15rem;
+  border-radius:8px;cursor:pointer;
+  font-family:'DM Mono',monospace;font-size:.7rem;
+  letter-spacing:.04em;text-transform:uppercase;
+  transition:all .15s;border:1px solid var(--border);
+  background:transparent;color:var(--muted);
+  white-space:nowrap;touch-action:manipulation;
+  min-width:72px;text-align:center;
 }
 .mbk:active{opacity:.7;}
-.mnxt{background:var(--accent);color:var(--run-fg);border-color:var(--accent);font-family:'Syne',sans-serif;font-weight:700;font-size:.75rem;}
+.mnxt{
+  background:var(--accent);color:var(--run-fg);
+  border-color:var(--accent);
+  font-family:'Syne',sans-serif;font-weight:700;font-size:.76rem;
+}
 .mnxt:hover{background:var(--run-hover);}
 .mnxt:disabled{opacity:.35;cursor:not-allowed;}
 
-/* step headings */
+/* mobile section heading */
 .mhd{font-size:1.05rem;font-weight:800;letter-spacing:-.02em;line-height:1.2;}
 .msub{font-family:'DM Mono',monospace;font-size:.6rem;color:var(--muted);line-height:1.65;margin-top:.15rem;}
 
-/* upload */
+/* source tabs */
+.mst{display:flex;gap:5px;}
+.mstb{flex:1;padding:.65rem;font-family:'DM Mono',monospace;font-size:.68rem;text-transform:uppercase;letter-spacing:.04em;border:1px solid var(--border);background:transparent;color:var(--muted);border-radius:8px;cursor:pointer;transition:all .15s;text-align:center;touch-action:manipulation;}
+.mstb.on{background:var(--accent);color:var(--run-fg);border-color:var(--accent);}
+
+/* upload zone */
 .muz{
   border:1.5px dashed var(--border);border-radius:12px;
   padding:2rem 1rem;text-align:center;cursor:pointer;
@@ -195,25 +239,20 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;heigh
 .mui{font-size:2.2rem;display:block;margin-bottom:.5rem;}
 .muz p{font-family:'DM Mono',monospace;font-size:.68rem;color:var(--muted);line-height:1.7;}
 .muz strong{color:var(--accent);}
-.mth{width:100%;border-radius:10px;border:1px solid var(--border);display:none;margin-top:.75rem;aspect-ratio:16/9;object-fit:contain;background:#000;}
+.mth{width:100%;border-radius:10px;border:1px solid var(--border);display:none;margin-top:.75rem;max-height:220px;object-fit:contain;background:#000;}
 .mth.vis{display:block;}
 .mrr{display:none;justify-content:flex-end;margin-top:.4rem;}
 .mrr.vis{display:flex;}
-.mrb{background:transparent;border:1px solid var(--border);color:var(--muted);font-family:'DM Mono',monospace;font-size:.6rem;padding:4px 10px;border-radius:5px;cursor:pointer;transition:all .15s;touch-action:manipulation;}
+.mrb{background:transparent;border:1px solid var(--border);color:var(--muted);font-family:'DM Mono',monospace;font-size:.6rem;padding:5px 12px;border-radius:5px;cursor:pointer;transition:all .15s;touch-action:manipulation;}
 .mrb:hover{border-color:var(--accent3);color:var(--accent3);}
 
-/* source tabs */
-.mst{display:flex;gap:5px;margin-bottom:.75rem;}
-.mstb{flex:1;padding:.6rem;font-family:'DM Mono',monospace;font-size:.66rem;text-transform:uppercase;letter-spacing:.04em;border:1px solid var(--border);background:transparent;color:var(--muted);border-radius:8px;cursor:pointer;transition:all .15s;text-align:center;touch-action:manipulation;}
-.mstb.on{background:var(--accent);color:var(--run-fg);border-color:var(--accent);}
-
-/* cam */
-.mcv{width:100%;border-radius:10px;border:1px solid var(--border);background:#000;aspect-ratio:16/9;object-fit:cover;display:block;}
+/* live camera view */
+.mcv{width:100%;border-radius:10px;border:1px solid var(--border);background:#000;max-height:220px;object-fit:cover;display:block;}
 .mcs{font-family:'DM Mono',monospace;font-size:.63rem;color:var(--muted);text-align:center;margin:.45rem 0;}
-.mcr{display:flex;gap:6px;margin-top:.3rem;}
+.mcr{display:flex;gap:6px;}
 .mcb{flex:1;padding:.65rem;border:1px solid var(--border);background:transparent;color:var(--text);border-radius:8px;font-family:'DM Mono',monospace;font-size:.66rem;text-transform:uppercase;cursor:pointer;transition:all .15s;touch-action:manipulation;}
 .mcb:disabled{opacity:.3;cursor:not-allowed;}
-.mcb.snap{border-color:var(--accent);color:var(--accent);}
+.mcb.live-on{background:var(--accent3);color:#fff;border-color:var(--accent3);}
 .mcb.dng{border-color:var(--accent3);color:var(--accent3);}
 
 /* settings cards */
@@ -225,35 +264,45 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;heigh
 .mci{width:100%;padding:8px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:7px;color:var(--text);font-family:'DM Mono',monospace;font-size:.72rem;outline:none;margin-top:.5rem;display:none;}
 .mci.vis{display:block;}
 .mci:focus{border-color:var(--accent);}
-/* mobile sliders */
 .msr{display:flex;flex-direction:column;gap:5px;margin-bottom:.55rem;}
 .msh{display:flex;justify-content:space-between;}
 .msh span{font-family:'DM Mono',monospace;font-size:.66rem;color:var(--text);}
 .msh .mv{color:var(--accent);font-weight:500;}
 input.mr{-webkit-appearance:none;appearance:none;width:100%;height:4px;background:var(--border);border-radius:2px;outline:none;}
-input.mr::-webkit-slider-thumb{-webkit-appearance:none;width:24px;height:24px;border-radius:50%;background:var(--accent);cursor:pointer;box-shadow:0 0 0 4px rgba(var(--accent-rgb),.12);}
-.mtr{display:flex;align-items:center;justify-content:space-between;padding:.2rem 0;}
+input.mr::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:26px;border-radius:50%;background:var(--accent);cursor:pointer;box-shadow:0 0 0 4px rgba(var(--accent-rgb),.12);}
+.mtr{display:flex;align-items:center;justify-content:space-between;padding:.22rem 0;}
 .mtrl{font-family:'DM Mono',monospace;font-size:.66rem;color:var(--text);}
-.mtg{position:relative;width:42px;height:24px;}
+.mtg{position:relative;width:44px;height:25px;}
 .mtg input{opacity:0;width:0;height:0;}
-.mtgs{position:absolute;inset:0;border-radius:24px;background:var(--border);cursor:pointer;transition:background .2s;}
-.mtgs::before{content:'';position:absolute;width:18px;height:18px;left:3px;top:3px;border-radius:50%;background:var(--muted);transition:transform .2s,background .2s;}
+.mtgs{position:absolute;inset:0;border-radius:25px;background:var(--border);cursor:pointer;transition:background .2s;}
+.mtgs::before{content:'';position:absolute;width:19px;height:19px;left:3px;top:3px;border-radius:50%;background:var(--muted);transition:transform .2s,background .2s;}
 .mtg input:checked+.mtgs{background:var(--accent);}
-.mtg input:checked+.mtgs::before{transform:translateX(18px);background:var(--run-fg);}
+.mtg input:checked+.mtgs::before{transform:translateX(19px);background:var(--run-fg);}
 
 /* result page */
-.mrs{flex:1;overflow:auto;background:var(--ascii-bg);border-radius:10px;padding:.75rem;transition:background .3s;-webkit-overflow-scrolling:touch;min-height:120px;}
+.mrsp{
+  flex:1;
+  overflow:auto;
+  background:var(--ascii-bg);
+  border-radius:10px;
+  transition:background .3s;
+  -webkit-overflow-scrolling:touch;
+  /* give it a min height so it doesn't collapse */
+  min-height:100px;
+}
+.mrsp-inner{padding:.75rem;}
 #mao{font-family:'DM Mono',monospace;font-size:5px;line-height:1.1;white-space:pre;color:var(--ascii-color);display:none;letter-spacing:.08em;}
 #mao.col span{display:inline;}
 .mph{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:120px;gap:.5rem;color:var(--muted);}
 .mph p{font-family:'DM Mono',monospace;font-size:.62rem;text-align:center;line-height:1.8;}
-.mir{display:flex;align-items:center;gap:6px;margin-bottom:.3rem;}
+.mir{display:flex;align-items:center;gap:6px;}
 .mbdg{background:rgba(var(--accent-rgb),.1);color:var(--accent);font-family:'DM Mono',monospace;font-size:.55rem;padding:2px 8px;border-radius:100px;}
-.mar{display:flex;gap:6px;margin-top:.75rem;flex-wrap:wrap;}
-.mab{flex:1;min-width:70px;padding:.65rem .5rem;border-radius:8px;font-family:'DM Mono',monospace;font-size:.65rem;text-transform:uppercase;letter-spacing:.04em;cursor:pointer;transition:all .15s;touch-action:manipulation;text-align:center;border:1px solid var(--border);background:transparent;color:var(--text);}
+.mlive{display:none;align-items:center;gap:4px;background:rgba(255,107,71,.1);color:var(--accent3);font-family:'DM Mono',monospace;font-size:.55rem;padding:2px 8px;border-radius:100px;}
+.mlive.vis{display:flex;}
+/* result action row — at bottom of page 3 */
+.mar{display:flex;gap:6px;flex-wrap:wrap;flex-shrink:0;}
+.mab{flex:1;min-width:70px;padding:.68rem .5rem;border-radius:8px;font-family:'DM Mono',monospace;font-size:.66rem;text-transform:uppercase;letter-spacing:.04em;cursor:pointer;transition:all .15s;touch-action:manipulation;text-align:center;border:1px solid var(--border);background:transparent;color:var(--text);}
 .mab:hover{border-color:var(--accent);color:var(--accent);}
-.mab.pri{background:var(--accent);color:var(--run-fg);border-color:var(--accent);font-family:'Syne',sans-serif;font-weight:700;}
-.mab.pri:hover{background:var(--run-hover);}
 .mab:disabled{opacity:.3;cursor:not-allowed;}
 
 canvas{display:none;}
@@ -264,7 +313,7 @@ canvas{display:none;}
 </head>
 <body>
 
-<!-- HEADER -->
+<!-- SHARED HEADER — sticky -->
 <header>
   <div class="hl">
     <h1>IMG <span>→</span> ASCII</h1>
@@ -286,7 +335,6 @@ canvas{display:none;}
 <!-- ══════════ DESKTOP ══════════ -->
 <div class="desk">
   <aside class="sb">
-
     <div>
       <div class="slbl">Source</div>
       <div class="stabs">
@@ -314,7 +362,6 @@ canvas{display:none;}
         </div>
       </div>
     </div>
-
     <div>
       <div class="slbl">Charset</div>
       <div class="pg">
@@ -326,11 +373,10 @@ canvas{display:none;}
         <button class="pl" data-cs="custom">Custom</button>
       </div>
       <div class="ccw" id="dCCW">
-        <input class="cci" type="text" id="dCC" value=" .:-=+*#@%$" maxlength="100" spellcheck="false" placeholder=" .:-=+*#@%$"/>
+        <input class="cci" type="text" id="dCC" value=" .:-=+*#@%$" maxlength="100" spellcheck="false"/>
         <p class="ch">Light → dark, left to right. Min 2 chars.</p>
       </div>
     </div>
-
     <div class="cg">
       <div class="slbl">Controls</div>
       <div class="sr">
@@ -354,14 +400,11 @@ canvas{display:none;}
         <label class="tg"><input type="checkbox" id="dCol"/><span class="tgs"></span></label>
       </div>
     </div>
-
     <div class="bg">
       <button class="runb" id="dConv" disabled>Convert →</button>
       <button class="outb" id="dCopy">Copy ASCII</button>
     </div>
-
   </aside>
-
   <div class="op">
     <div class="otb">
       <span>Output</span>
@@ -384,16 +427,20 @@ canvas{display:none;}
 
 <!-- ══════════ MOBILE ══════════ -->
 <div class="mob">
+
+  <!-- scrollable step pages -->
   <div class="mpgs">
 
-    <!-- PAGE 1: source -->
+    <!-- STEP 1: source -->
     <div class="mpg act" id="mp1">
       <div class="mhd">Choose source</div>
-      <p class="msub">Pick a photo from your gallery, or use your camera.</p>
+      <p class="msub">Pick a photo or use your camera for live ASCII.</p>
       <div class="mst">
         <button class="mstb on" id="mTabImg">Photo</button>
         <button class="mstb" id="mTabCam">Camera</button>
       </div>
+
+      <!-- photo upload -->
       <div id="mImgSrc">
         <div class="muz" id="mDZ">
           <input type="file" id="mFI" accept="image/*"/>
@@ -403,18 +450,20 @@ canvas{display:none;}
         <img class="mth" id="mTh" alt=""/>
         <div class="mrr" id="mRR"><button class="mrb" id="mRB">✕ Remove</button></div>
       </div>
+
+      <!-- camera -->
       <div id="mCamSrc" style="display:none">
         <video class="mcv" id="mVid" autoplay playsinline muted></video>
         <p class="mcs" id="mCS">Tap Start to activate camera</p>
         <div class="mcr">
           <button class="mcb" id="mStart">Start</button>
-          <button class="mcb snap" id="mSnap" disabled>Snap photo</button>
+          <button class="mcb" id="mLiveBtn" disabled>Go Live</button>
           <button class="mcb dng" id="mStopC" disabled>Stop</button>
         </div>
       </div>
     </div>
 
-    <!-- PAGE 2: settings -->
+    <!-- STEP 2: settings -->
     <div class="mpg" id="mp2">
       <div class="mhd">Settings</div>
       <p class="msub">Adjust style — or keep defaults and hit Convert.</p>
@@ -428,14 +477,10 @@ canvas{display:none;}
           <button class="mp2" data-mcs="binary">Binary</button>
           <button class="mp2" data-mcs="custom">Custom</button>
         </div>
-        <input class="mci" type="text" id="mCC" value=" .:-=+*#@%$" maxlength="100" spellcheck="false" placeholder=" .:-=+*#@%$" autocomplete="off"/>
+        <input class="mci" type="text" id="mCC" value=" .:-=+*#@%$" maxlength="100" spellcheck="false" autocomplete="off"/>
       </div>
       <div class="mcard">
         <div class="mct">Adjustments</div>
-        <div class="msr">
-          <div class="msh"><span>Width (chars)</span><span class="mv" id="mWV">80</span></div>
-          <input class="mr" type="range" id="mWS" min="40" max="140" value="80" step="5"/>
-        </div>
         <div class="msr">
           <div class="msh"><span>Contrast</span><span class="mv" id="mCV">1.0</span></div>
           <input class="mr" type="range" id="mCS2" min="0.5" max="2.5" value="1.0" step="0.1"/>
@@ -455,23 +500,30 @@ canvas{display:none;}
       </div>
     </div>
 
-    <!-- PAGE 3: result -->
+    <!-- STEP 3: result -->
     <div class="mpg" id="mp3">
-      <div class="mir"><span class="mbdg" id="mDim">—</span></div>
-      <div class="mrs" id="mRS">
-        <div class="mph" id="mPH"><p>Converting…</p></div>
-        <pre id="mao"></pre>
+      <div class="mir">
+        <span class="mbdg" id="mDim">—</span>
+        <div class="mlive" id="mLiveBadge"><span class="ld"></span>live</div>
       </div>
+      <!-- scrollable ASCII output -->
+      <div class="mrsp" id="mRS">
+        <div class="mrsp-inner">
+          <div class="mph" id="mPH"><p>Converting…</p></div>
+          <pre id="mao"></pre>
+        </div>
+      </div>
+      <!-- action buttons -->
       <div class="mar">
-        <button class="mab pri" id="mRedo">↺ Redo</button>
         <button class="mab" id="mCopy">Copy</button>
         <button class="mab" id="mPng" disabled>Save PNG</button>
+        <button class="mab" id="mSaveTxt" disabled>Save .txt</button>
       </div>
     </div>
 
   </div>
 
-  <!-- nav -->
+  <!-- STATIC BOTTOM NAV -->
   <div class="mnav">
     <button class="mbk" id="mBack" style="visibility:hidden">Back</button>
     <div class="mdots">
@@ -481,6 +533,7 @@ canvas{display:none;}
     </div>
     <button class="mnxt" id="mNext" disabled>Next</button>
   </div>
+
 </div>
 
 <canvas id="hc"></canvas>
@@ -498,30 +551,38 @@ const CS={
 };
 
 const $=id=>document.getElementById(id);
-const hc=$('hc'),hctx=hc.getContext('2d');
+const hc=$('hc'), hctx=hc.getContext('2d');
 const ec=$('ec');
+let lastPlain='', lastRD=null;
 
 /* ── THEME ── */
-const thmEl=$('thm'),lDark=$('lDark'),lLight=$('lLight');
+const thmEl=$('thm'), lDark=$('lDark'), lLight=$('lLight');
 function setTheme(light){
   if(light){document.body.dataset.theme='light';thmEl.checked=true;lDark.classList.remove('on');lLight.classList.add('on');}
   else{document.body.removeAttribute('data-theme');thmEl.checked=false;lDark.classList.add('on');lLight.classList.remove('on');}
 }
 thmEl.addEventListener('change',()=>setTheme(thmEl.checked));
 
-/* ── SHARED CONVERT ENGINE ── */
-let lastPlain='', lastRD=null;
-
-function pixelAdjust(r,g,b,con,bri,inv){
+/* ── SHARED PIXEL ENGINE ── */
+function pixAdj(r,g,b,con,bri,inv){
   let nr=(r*bri-128)*con+128, ng=(g*bri-128)*con+128, nb=(b*bri-128)*con+128;
   if(inv){nr=255-nr;ng=255-ng;nb=255-nb;}
   return[Math.max(0,Math.min(255,nr|0)),Math.max(0,Math.min(255,ng|0)),Math.max(0,Math.min(255,nb|0))];
 }
 
-function doConvert(src,cw,con,bri,inv,colMode,chars){
-  const sw=src.videoWidth||src.naturalWidth||src.width||640;
-  const sh=src.videoHeight||src.naturalHeight||src.height||360;
-  const ch=Math.round(cw*(sh/sw)*0.45);
+/**
+ * Convert a source (image/video) to ASCII.
+ * charWidth is computed from the source's own pixel dimensions:
+ *   charWidth  = targetChars  (user slider)
+ *   charHeight = round(charWidth * (srcH/srcW) * 0.45)
+ * This preserves the original aspect ratio exactly.
+ */
+function doConvert(src, maxCW, con, bri, inv, colMode, chars){
+  const sw = src.videoWidth  || src.naturalWidth  || src.width  || 640;
+  const sh = src.videoHeight || src.naturalHeight || src.height || 360;
+  const cw = maxCW;
+  const ch = Math.round(cw * (sh / sw) * 0.45); // 0.45 corrects for char cell aspect ratio
+
   hc.width=cw; hc.height=ch;
   hctx.drawImage(src,0,0,cw,ch);
   const px=hctx.getImageData(0,0,cw,ch).data;
@@ -531,7 +592,7 @@ function doConvert(src,cw,con,bri,inv,colMode,chars){
   for(let y=0;y<ch;y++){
     for(let x=0;x<cw;x++){
       const i=(y*cw+x)*4;
-      const[r,g,b]=pixelAdjust(px[i],px[i+1],px[i+2],con,bri,inv);
+      const[r,g,b]=pixAdj(px[i],px[i+1],px[i+2],con,bri,inv);
       const lum=(0.299*r+0.587*g+0.114*b)|0;
       const c2=chars[Math.floor((lum/255)*(chars.length-1))];
       plain+=c2;
@@ -541,11 +602,11 @@ function doConvert(src,cw,con,bri,inv,colMode,chars){
     if(colMode) html+='\n';
   }
   lastPlain=plain;
-  return{plain,html:colMode?html:null,cw,ch};
+  return{plain, html:colMode?html:null, cw, ch};
 }
 
 function doPng(){
-  if(!lastRD)return;
+  if(!lastRD) return;
   const{cw,ch,chars,pixels,con,bri,inv,colMode}=lastRD;
   const FP=9,CW=6,LH=10;
   ec.width=cw*CW; ec.height=ch*LH;
@@ -557,43 +618,42 @@ function doPng(){
   for(let y=0;y<ch;y++){
     for(let x=0;x<cw;x++){
       const i=(y*cw+x)*4;
-      const[r,g,b]=pixelAdjust(pixels[i],pixels[i+1],pixels[i+2],con,bri,inv);
+      const[r,g,b]=pixAdj(pixels[i],pixels[i+1],pixels[i+2],con,bri,inv);
       const lum=(0.299*r+0.587*g+0.114*b)|0;
       const c2=chars[Math.floor((lum/255)*(chars.length-1))];
-      if(c2===' ')continue;
+      if(c2===' ') continue;
       ectx.fillStyle=colMode?`rgb(${r},${g},${b})`:fgC;
       ectx.fillText(c2,x*CW,y*LH);
     }
   }
-  ec.toBlob(blob=>{const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='ascii-art.png';a.click();},'image/png');
+  ec.toBlob(blob=>{
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download='ascii-art.png';
+    a.click();
+  },'image/png');
 }
 
-/* ══════════════════════════════════════
-   DESKTOP LOGIC — isolated scope
-══════════════════════════════════════ */
+/* ══════════════════════════════
+   DESKTOP — isolated scope
+══════════════════════════════ */
 (function(){
   let dSrc='image', dStream=null, dLive=null, dSnapped=null;
 
   const conv=$('dConv'), copy=$('dCopy'), txt=$('dTxt'), png=$('dPng');
   const dao=$('dao'), dph=$('dPH'), dDim=$('dDim'), dLB=$('dLB');
   const dDZ=$('dDZ'), dFI=$('dFI'), dPW=$('dPW'), dThumb=$('dThumb');
-  const dVid=$('dVid'), dCS=$('dCS');
+  const dVid=$('dVid'), dCSEl=$('dCS');
   const dWS=$('dWS'), dCS2=$('dCS2'), dBS=$('dBS'), dInv=$('dInv'), dCol=$('dCol');
   const dCC=$('dCC'), dCCW=$('dCCW');
 
   function getChars(){
     const cs=document.querySelector('.pl.on[data-cs]')?.dataset.cs||'standard';
-    if(cs==='custom') return dCC.value.length>=2?dCC.value:' @';
-    return CS[cs];
+    return cs==='custom'?(dCC.value.length>=2?dCC.value:' @'):CS[cs];
   }
   function getSrc(){
-    if(dSrc==='webcam'){
-      // after snap, use snapped image; if live, use video
-      if(dSnapped&&!dLive) return dSnapped;
-      if(dStream) return dVid;
-    }
-    // image mode — use whatever is in sharedImage slot (set by dLoadImg)
-    return dSnapped; // reused for image too
+    if(dSrc==='webcam'&&dStream&&dLive) return dVid;
+    return dSnapped;
   }
   function setEn(v){conv.disabled=!v;}
   function setTxt(t){conv.textContent=t;}
@@ -610,12 +670,10 @@ function doPng(){
     txt.disabled=png.disabled=false;
   }
 
-  // sliders
   dWS.addEventListener('input',()=>$('dWV').textContent=dWS.value);
   dCS2.addEventListener('input',()=>$('dCV').textContent=parseFloat(dCS2.value).toFixed(1));
   dBS.addEventListener('input',()=>$('dBV').textContent=parseFloat(dBS.value).toFixed(1));
 
-  // source tabs
   $('dTabImg').addEventListener('click',()=>{
     dSrc='image';
     $('dTabImg').classList.add('on');$('dTabCam').classList.remove('on');
@@ -629,7 +687,6 @@ function doPng(){
     setEn(!!dStream); setTxt(dLive?'Stop live':'Convert →');
   });
 
-  // charset pills
   document.querySelectorAll('.pl[data-cs]').forEach(b=>{
     b.addEventListener('click',()=>{
       document.querySelectorAll('.pl[data-cs]').forEach(x=>x.classList.remove('on'));
@@ -638,16 +695,11 @@ function doPng(){
     });
   });
 
-  // file upload
   function loadFile(file){
-    if(!file||!file.type.startsWith('image/'))return;
+    if(!file||!file.type.startsWith('image/')) return;
     const url=URL.createObjectURL(file);
     const img=new Image();
-    img.onload=()=>{
-      dSnapped=img;
-      dThumb.src=url; dPW.style.display='block'; dDZ.style.display='none';
-      setEn(true);
-    };
+    img.onload=()=>{dSnapped=img; dThumb.src=url; dPW.style.display='block'; dDZ.style.display='none'; setEn(true);};
     img.src=url;
   }
   dFI.addEventListener('change',e=>loadFile(e.target.files[0]));
@@ -655,7 +707,6 @@ function doPng(){
   dDZ.addEventListener('dragleave',()=>dDZ.classList.remove('over'));
   dDZ.addEventListener('drop',e=>{e.preventDefault();dDZ.classList.remove('over');loadFile(e.dataTransfer.files[0]);});
 
-  // reset
   $('dReset').addEventListener('click',()=>{
     dSnapped=null; lastPlain=''; lastRD=null;
     dThumb.src=''; dPW.style.display='none'; dDZ.style.display='block'; dFI.value='';
@@ -664,18 +715,17 @@ function doPng(){
     dph.style.display='flex'; dDim.textContent='—';
   });
 
-  // webcam
   $('dStart').addEventListener('click',async()=>{
     try{
       dStream=await navigator.mediaDevices.getUserMedia({video:{width:1280,height:720}});
       dVid.srcObject=dStream;
-      dCS.innerHTML='<span class="ld"></span> Active';
+      dCSEl.innerHTML='<span class="ld"></span> Active';
       $('dStart').disabled=true; $('dSnap').disabled=false; $('dStop').disabled=false;
       setEn(true);
-    }catch{dCS.textContent='Access denied';}
+    }catch{dCSEl.textContent='Access denied';}
   });
   $('dSnap').addEventListener('click',()=>{
-    if(!dStream)return; stopLive();
+    if(!dStream) return; stopLive();
     const t=document.createElement('canvas');
     t.width=dVid.videoWidth||640; t.height=dVid.videoHeight||360;
     t.getContext('2d').drawImage(dVid,0,0,t.width,t.height);
@@ -687,14 +737,13 @@ function doPng(){
   $('dStop').addEventListener('click',()=>{
     stopLive();
     if(dStream){dStream.getTracks().forEach(t=>t.stop());dStream=null;}
-    dVid.srcObject=null; dCS.textContent='Stopped';
-    $('dStart').disabled=false; $('dSnap').disabled=true; $('dStop').disabled=false;
+    dVid.srcObject=null; dCSEl.textContent='Stopped';
+    $('dStart').disabled=false; $('dSnap').disabled=true; $('dStop').disabled=true;
     setEn(false); setTxt('Convert →');
   });
 
-  // convert
   function runDesk(){
-    const src=getSrc(); if(!src)return;
+    const src=getSrc(); if(!src) return;
     showOutput(doConvert(src,parseInt(dWS.value),parseFloat(dCS2.value),parseFloat(dBS.value),dInv.checked,dCol.checked,getChars()));
   }
   conv.addEventListener('click',()=>{
@@ -705,11 +754,11 @@ function doPng(){
   });
 
   copy.addEventListener('click',()=>{
-    if(!lastPlain)return;
+    if(!lastPlain) return;
     navigator.clipboard.writeText(lastPlain).then(()=>{copy.textContent='Copied!';setTimeout(()=>copy.textContent='Copy ASCII',1500);});
   });
   txt.addEventListener('click',()=>{
-    if(!lastPlain)return;
+    if(!lastPlain) return;
     const a=document.createElement('a');
     a.href=URL.createObjectURL(new Blob([lastPlain],{type:'text/plain'}));
     a.download='ascii-art.txt'; a.click();
@@ -717,49 +766,56 @@ function doPng(){
   png.addEventListener('click',doPng);
 })();
 
-/* ══════════════════════════════════════
-   MOBILE LOGIC — isolated scope
-══════════════════════════════════════ */
+/* ══════════════════════════════
+   MOBILE — isolated scope
+══════════════════════════════ */
 (function(){
-  let step=0, mImg=null, mStream=null, mCharset='standard';
+  let step=0, mImg=null, mStream=null, mLiveInterval=null, mCharset='standard';
+  let mIsLiveMode=false;
+
   const pages=[$('mp1'),$('mp2'),$('mp3')];
   const dots=document.querySelectorAll('.mdot');
   const mBack=$('mBack'), mNext=$('mNext');
 
+  /* ── page navigation ── */
   function goTo(n){
-    const prev=step;
-    // clear old page
-    pages[prev].classList.remove('act');
-    pages[prev].classList.add('prev');
-    // remove prev class after animation
-    const oldPage=pages[prev];
-    setTimeout(()=>oldPage.classList.remove('prev'),250);
-    // set new step
+    const oldPage=pages[step];
+    oldPage.classList.remove('act');
+    oldPage.classList.add('prev');
+    setTimeout(()=>oldPage.classList.remove('prev'), 250);
+
     step=Math.max(0,Math.min(2,n));
     pages[step].classList.add('act');
-    // dots
     dots.forEach((d,i)=>d.classList.toggle('act',i===step));
-    // nav
-    mBack.style.visibility=step===0?'hidden':'visible';
+
+    mBack.style.visibility = step===0 ? 'hidden' : 'visible';
     if(step===2){
       mNext.style.display='none';
       runMob();
     } else {
       mNext.style.display='block';
-      mNext.textContent=step===1?'Convert':'Next';
+      mNext.textContent = step===1 ? 'Convert' : 'Next';
       updateNext();
     }
   }
 
-  function updateNext(){mNext.disabled=step===0&&!mImg&&!mStream;}
+  function updateNext(){
+    // enabled if we have an image OR live camera stream
+    mNext.disabled = !(mImg || (mStream && !mIsLiveMode));
+    // if live mode is active on step 0, Next goes straight to result with live feed
+    if(mIsLiveMode) mNext.disabled=false;
+  }
 
-  mBack.addEventListener('click',()=>goTo(step-1));
-  mNext.addEventListener('click',()=>{
-    if(step===0&&!mImg&&!mStream)return;
-    goTo(step+1);
+  mBack.addEventListener('click',()=>{
+    if(step===2 && mIsLiveMode){
+      // going back from live result stops the live rendering but keeps stream
+      stopMobLive();
+    }
+    goTo(step-1);
   });
+  mNext.addEventListener('click',()=>goTo(step+1));
 
-  // source tabs
+  /* ── source tabs ── */
   $('mTabImg').addEventListener('click',()=>{
     $('mTabImg').classList.add('on'); $('mTabCam').classList.remove('on');
     $('mImgSrc').style.display='block'; $('mCamSrc').style.display='none';
@@ -771,9 +827,9 @@ function doPng(){
     updateNext();
   });
 
-  // file upload
+  /* ── photo upload ── */
   $('mFI').addEventListener('change',e=>{
-    const file=e.target.files[0]; if(!file)return;
+    const file=e.target.files[0]; if(!file) return;
     const url=URL.createObjectURL(file);
     const img=new Image();
     img.onload=()=>{
@@ -792,34 +848,53 @@ function doPng(){
     updateNext();
   });
 
-  // webcam
+  /* ── webcam ── */
   $('mStart').addEventListener('click',async()=>{
     try{
-      mStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});
+      mStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:1280},height:{ideal:720}}});
       $('mVid').srcObject=mStream;
-      $('mCS').innerHTML='<span class="ld"></span> Camera active';
-      $('mStart').disabled=true; $('mSnap').disabled=false; $('mStopC').disabled=false;
+      $('mCS').innerHTML='<span class="ld"></span> Camera ready — tap Go Live for live ASCII';
+      $('mStart').disabled=true;
+      $('mLiveBtn').disabled=false;
+      $('mStopC').disabled=false;
       updateNext();
-    }catch{$('mCS').textContent='Camera access denied';}
+    }catch(e){
+      $('mCS').textContent='Camera access denied';
+    }
   });
-  $('mSnap').addEventListener('click',()=>{
-    if(!mStream)return;
-    const t=document.createElement('canvas');
-    const v=$('mVid');
-    t.width=v.videoWidth||640; t.height=v.videoHeight||360;
-    t.getContext('2d').drawImage(v,0,0,t.width,t.height);
-    const img=new Image();
-    img.onload=()=>{mImg=img; $('mCS').textContent='Photo snapped ✓'; updateNext();};
-    img.src=t.toDataURL();
+
+  /* ── GO LIVE button ── */
+  $('mLiveBtn').addEventListener('click',()=>{
+    if(!mStream) return;
+    mIsLiveMode=true;
+    $('mLiveBtn').classList.add('live-on');
+    $('mLiveBtn').textContent='● Live';
+    $('mCS').innerHTML='<span class="ld"></span> Live ASCII active';
+    updateNext();
+    // jump straight to result page and start live loop
+    goTo(2);
   });
+
   $('mStopC').addEventListener('click',()=>{
+    stopMobLive();
     if(mStream){mStream.getTracks().forEach(t=>t.stop());mStream=null;}
-    $('mVid').srcObject=null; $('mCS').textContent='Camera stopped';
-    $('mStart').disabled=false; $('mSnap').disabled=true; $('mStopC').disabled=true;
+    $('mVid').srcObject=null;
+    $('mCS').textContent='Camera stopped';
+    $('mStart').disabled=false;
+    $('mLiveBtn').disabled=true;
+    $('mLiveBtn').classList.remove('live-on');
+    $('mLiveBtn').textContent='Go Live';
+    $('mStopC').disabled=true;
+    mIsLiveMode=false;
     updateNext();
   });
 
-  // charset
+  function stopMobLive(){
+    if(mLiveInterval){clearInterval(mLiveInterval);mLiveInterval=null;}
+    $('mLiveBadge').classList.remove('vis');
+  }
+
+  /* ── charset ── */
   document.querySelectorAll('.mp2[data-mcs]').forEach(b=>{
     b.addEventListener('click',()=>{
       document.querySelectorAll('.mp2[data-mcs]').forEach(x=>x.classList.remove('on'));
@@ -827,7 +902,6 @@ function doPng(){
       $('mCC').classList.toggle('vis', mCharset==='custom');
     });
   });
-  $('mWS').addEventListener('input',()=>$('mWV').textContent=$('mWS').value);
   $('mCS2').addEventListener('input',()=>$('mCV').textContent=parseFloat($('mCS2').value).toFixed(1));
   $('mBS').addEventListener('input',()=>$('mBV').textContent=parseFloat($('mBS').value).toFixed(1));
 
@@ -836,12 +910,44 @@ function doPng(){
     return CS[mCharset]||CS.standard;
   }
 
+  /* ── get appropriate char width from source dimensions ──
+     We target a fixed output width in chars that preserves the
+     source's own aspect ratio. The height is always derived
+     from width * (srcH/srcW) * 0.45 inside doConvert().
+     For mobile we use 80 chars as the base width — wide enough
+     to see detail but fast enough to render.                    */
+  function getMobWidth(src){
+    // use a fixed mobile width — aspect ratio is handled inside doConvert
+    return 80;
+  }
+
+  /* ── run conversion ── */
   function runMob(){
-    const src=mImg; if(!src){$('mPH').style.display='flex';return;}
+    // choose source: live camera or snapped/uploaded image
+    const src = mIsLiveMode ? $('mVid') : mImg;
+    if(!src){$('mPH').style.display='flex';return;}
+
+    // if live mode, start interval
+    if(mIsLiveMode){
+      $('mLiveBadge').classList.add('vis');
+      // initial frame
+      renderMob(src);
+      // keep rendering at ~8fps (120ms)
+      if(!mLiveInterval){
+        mLiveInterval=setInterval(()=>renderMob($('mVid')), 120);
+      }
+    } else {
+      stopMobLive();
+      $('mLiveBadge').classList.remove('vis');
+      renderMob(src);
+    }
+  }
+
+  function renderMob(src){
     $('mPH').style.display='none';
     const res=doConvert(
       src,
-      parseInt($('mWS').value),
+      getMobWidth(src),
       parseFloat($('mCS2').value),
       parseFloat($('mBS').value),
       $('mInv').checked,
@@ -854,14 +960,24 @@ function doPng(){
     mao.style.display='block';
     $('mDim').textContent=`${res.cw}×${res.ch}`;
     $('mPng').disabled=false;
+    $('mSaveTxt').disabled=false;
   }
 
-  $('mRedo').addEventListener('click',runMob);
+  /* ── result actions ── */
   $('mCopy').addEventListener('click',()=>{
-    if(!lastPlain)return;
-    navigator.clipboard.writeText(lastPlain).then(()=>{$('mCopy').textContent='Copied!';setTimeout(()=>$('mCopy').textContent='Copy',1500);});
+    if(!lastPlain) return;
+    navigator.clipboard.writeText(lastPlain).then(()=>{
+      $('mCopy').textContent='Copied!';
+      setTimeout(()=>$('mCopy').textContent='Copy',1500);
+    });
   });
   $('mPng').addEventListener('click',doPng);
+  $('mSaveTxt').addEventListener('click',()=>{
+    if(!lastPlain) return;
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(new Blob([lastPlain],{type:'text/plain'}));
+    a.download='ascii-art.txt'; a.click();
+  });
 })();
 </script>
 </body>
