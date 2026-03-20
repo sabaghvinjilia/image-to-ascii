@@ -274,7 +274,19 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;heigh
 .mrb:hover{border-color:var(--accent3);color:var(--accent3);}
 
 /* ── camera ── */
-.mcv{width:100%;border-radius:10px;border:1px solid var(--border);background:#000;max-height:200px;object-fit:cover;display:block;}
+.mcv-wrap{position:relative;border-radius:10px;overflow:hidden;background:#000;}
+.mcv{width:100%;border-radius:10px;border:1px solid var(--border);background:#000;max-height:220px;object-fit:cover;display:block;}
+/* flip button overlaid on video preview */
+.mflip{
+  position:absolute;top:8px;right:8px;
+  width:36px;height:36px;border-radius:50%;
+  background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.18);
+  color:#fff;display:flex;align-items:center;justify-content:center;
+  cursor:pointer;transition:background .15s;touch-action:manipulation;
+  font-size:17px;line-height:1;z-index:5;
+}
+.mflip:hover{background:rgba(0,0,0,.82);}
+.mflip:disabled{opacity:.25;cursor:not-allowed;}
 .mcs{font-family:'DM Mono',monospace;font-size:.62rem;color:var(--muted);text-align:center;margin:.4rem 0;}
 .mcr{display:flex;gap:6px;}
 .mcb{flex:1;padding:.65rem;border:1px solid var(--border);background:transparent;color:var(--text);border-radius:8px;font-family:'DM Mono',monospace;font-size:.64rem;text-transform:uppercase;cursor:pointer;transition:all .15s;touch-action:manipulation;}
@@ -498,7 +510,10 @@ canvas{display:none;}
         <div class="mrr" id="mRR"><button class="mrb" id="mRB">✕ Remove</button></div>
       </div>
       <div id="mCamSrc" style="display:none">
-        <video class="mcv" id="mVid" autoplay playsinline muted></video>
+        <div class="mcv-wrap">
+          <video class="mcv" id="mVid" autoplay playsinline muted></video>
+          <button class="mflip" id="mFlip" disabled title="Flip camera">🔄</button>
+        </div>
         <p class="mcs" id="mCS">Tap Start to activate camera</p>
         <div class="mcr">
           <button class="mcb" id="mStart">Start</button>
@@ -559,7 +574,7 @@ canvas{display:none;}
       </div>
       <div class="mar">
         <button class="mab" id="mCopy">Copy</button>
-        <button class="mab" id="mPng" disabled>Save PNG</button>
+        <button class="mab" id="mPng" disabled>Save to gallery</button>
         <button class="mab" id="mSaveTxt" disabled>Save .txt</button>
       </div>
     </div>
@@ -654,7 +669,7 @@ function doConvert(src, cw, con, bri, inv, colMode, chars){
   return{plain, html:colMode?html:null, cw, ch};
 }
 
-function doPng(){
+function doPng(isMobile){
   if(!lastRD) return;
   const{cw,ch,chars,pixels,con,bri,inv,colMode}=lastRD;
   const FP=9,CW=6,LH=10;
@@ -675,10 +690,32 @@ function doPng(){
       ectx.fillText(c2,x*CW,y*LH);
     }
   }
-  ec.toBlob(blob=>{
+
+  ec.toBlob(async blob=>{
+    const filename='ascii-art.png';
+
+    // On mobile, try Web Share API first — this routes to gallery/apps
+    if(isMobile && navigator.canShare){
+      try{
+        const file=new File([blob], filename, {type:'image/png'});
+        if(navigator.canShare({files:[file]})){
+          await navigator.share({
+            files:[file],
+            title:'ASCII Art',
+            text:'Created with IMG → ASCII'
+          });
+          return; // share sheet handled it
+        }
+      }catch(e){
+        // User cancelled share or share failed — fall through to download
+        if(e.name==='AbortError') return; // user cancelled, do nothing
+      }
+    }
+
+    // Fallback: trigger download (desktop or share not available)
     const a=document.createElement('a');
     a.href=URL.createObjectURL(blob);
-    a.download='ascii-art.png';
+    a.download=filename;
     a.click();
   },'image/png');
 }
@@ -829,7 +866,7 @@ function doPng(){
     a.href=URL.createObjectURL(new Blob([lastPlain],{type:'text/plain'}));
     a.download='ascii-art.txt'; a.click();
   });
-  png.addEventListener('click',doPng);
+  png.addEventListener('click',()=>doPng(false));
 })();
 
 /* ══════════════════════════════
@@ -940,19 +977,40 @@ function doPng(){
   });
 
   /* ── Camera ── */
-  $('mStart').addEventListener('click',async()=>{
+  let mFacingMode = 'environment'; // start with back camera
+
+  async function startCamera(){
+    // Stop any existing stream first
+    if(mStream){ mStream.getTracks().forEach(t=>t.stop()); mStream=null; }
     try{
       mStream=await navigator.mediaDevices.getUserMedia({
-        video:{facingMode:'environment',width:{ideal:1280},height:{ideal:720}}
+        video:{facingMode:mFacingMode, width:{ideal:1280}, height:{ideal:720}}
       });
       $('mVid').srcObject=mStream;
       $('mCS').innerHTML='<span class="ld"></span> Camera ready — tap Go Live';
       $('mStart').disabled=true;
       $('mLiveBtn').disabled=false;
       $('mStopC').disabled=false;
+      $('mFlip').disabled=false;
       updateNext();
     }catch(e){
       $('mCS').textContent='Camera access denied';
+    }
+  }
+
+  $('mStart').addEventListener('click', startCamera);
+
+  /* ── Flip camera (front ↔ back) ── */
+  $('mFlip').addEventListener('click', async ()=>{
+    if(!mStream) return;
+    mFacingMode = mFacingMode==='environment' ? 'user' : 'environment';
+    // restart stream with new facing mode
+    await startCamera();
+    // restore live state if it was active
+    if(mIsLiveMode){
+      $('mLiveBtn').classList.add('live-on');
+      $('mLiveBtn').textContent='● Live';
+      $('mCS').innerHTML='<span class="ld"></span> Live mode active';
     }
   });
 
@@ -979,6 +1037,8 @@ function doPng(){
     $('mLiveBtn').classList.remove('live-on');
     $('mLiveBtn').textContent='Go Live';
     $('mStopC').disabled=true;
+    $('mFlip').disabled=true;
+    mFacingMode='environment'; // reset to back camera
     updateNext();
   });
 
@@ -1062,7 +1122,7 @@ function doPng(){
       setTimeout(()=>$('mCopy').textContent='Copy',1500);
     });
   });
-  $('mPng').addEventListener('click',doPng);
+  $('mPng').addEventListener('click',()=>doPng(true));
   $('mSaveTxt').addEventListener('click',()=>{
     if(!lastPlain) return;
     const a=document.createElement('a');
