@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Image → ASCII</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;700;800&display=swap');
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+
+/* ── THEME VARS ── */
+:root {
+  --bg:#0d0d0d; --surface:#181818; --border:#2e2e2e;
+  --accent:#ffffff; --accent-rgb:255,255,255;
+  --accent2:#aaaaaa; --accent3:#ff6b47;
+  --text:#f0f0f0; --muted:#555;
+  --run-fg:#000; --run-hover:#e0e0e0;
+  --ascii-color:#ffffff; --ascii-bg:#0d0d0d; --sidebar-bg:#0d0d0d;
+}
+[data-theme="light"]{
+  --bg:#f5f4f0; --surface:#ebe9e3; --border:#d0cec8;
+  --accent:#1a1a1a; --accent-rgb:26,26,26;
+  --accent2:#555; --accent3:#dc2626;
+  --text:#1a1a1a; --muted:#888;
+  --run-fg:#fff; --run-hover:#333;
+  --ascii-color:#1a1a1a; --ascii-bg:#f5f4f0; --sidebar-bg:#f5f4f0;
+}
+
+html,body{min-height:100vh;background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;transition:background 0.3s,color 0.3s;}
+body{display:grid;grid-template-rows:auto 1fr;padding:0;}
+
+header{padding:1.3rem 2rem;border-bottom:1px solid var(--border);display:flex;align-items:baseline;gap:1rem;background:var(--surface);transition:background 0.3s,border-color 0.3s;}
+header h1{font-size:clamp(1.3rem,3vw,1.8rem);font-weight:800;letter-spacing:-0.03em;line-height:1;}
+header h1 span{color:var(--accent);transition:color 0.3s;}
+header p{font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--muted);letter-spacing:0.08em;text-transform:uppercase;}
+
+.layout{display:grid;grid-template-columns:300px 1fr;height:calc(100vh - 60px);overflow:hidden;}
+.sidebar{border-right:1px solid var(--border);padding:1.1rem;overflow-y:auto;display:flex;flex-direction:column;gap:1.1rem;background:var(--sidebar-bg);transition:background 0.3s,border-color 0.3s;}
+.section-label{font-family:'DM Mono',monospace;font-size:0.58rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);margin-bottom:0.35rem;transition:color 0.3s;}
+
+/* ── THEME TOGGLE ── */
+.theme-toggle{display:flex;align-items:center;gap:8px;}
+.theme-toggle-label{font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--text);transition:color 0.3s;}
+.theme-toggle-label.muted{color:var(--muted);}
+.theme-switch{position:relative;width:44px;height:24px;flex-shrink:0;}
+.theme-switch input{opacity:0;width:0;height:0;}
+.theme-track{position:absolute;inset:0;border-radius:24px;background:var(--border);border:1px solid var(--border);cursor:pointer;transition:background 0.25s,border-color 0.25s;}
+[data-theme="light"] .theme-track{background:var(--accent);border-color:var(--accent);}
+.theme-thumb{position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform 0.25s,background 0.25s;pointer-events:none;}
+[data-theme="light"] .theme-thumb{transform:translateX(20px);background:#1a1a1a;}
+
+/* swatch inner colors — kept for potential reuse */
+.sw-light{background:#f5f4f0;border:1px solid #d0cec8;}
+
+/* Custom theme color picker — unused now, kept for CSS integrity */
+.custom-color-wrap{display:none;}
+.bg-mode-row{display:flex;gap:4px;margin-top:4px;}
+.bg-pill{flex:1;padding:4px 0;font-family:'DM Mono',monospace;font-size:0.58rem;text-transform:uppercase;letter-spacing:0.04em;border:1px solid var(--border);background:transparent;color:var(--muted);border-radius:100px;cursor:pointer;transition:all 0.15s;text-align:center;}
+
+/* ── SOURCE ── */
+.source-tabs{display:flex;gap:4px;margin-bottom:9px;}
+.src-tab{flex:1;padding:5px;font-family:'DM Mono',monospace;font-size:0.6rem;letter-spacing:0.06em;text-transform:uppercase;border:1px solid var(--border);background:transparent;color:var(--muted);border-radius:6px;cursor:pointer;transition:all 0.15s;text-align:center;}
+.src-tab:hover{border-color:var(--accent);color:var(--accent);}
+.src-tab.active{border-color:var(--accent);background:var(--accent);color:var(--run-fg);}
+
+.drop-zone{border:1.5px dashed var(--border);border-radius:10px;padding:1.4rem 1rem;text-align:center;cursor:pointer;transition:border-color 0.2s,background 0.2s;position:relative;}
+.drop-zone:hover,.drop-zone.drag-over{border-color:var(--accent);background:rgba(var(--accent-rgb),0.04);}
+.drop-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+.drop-icon{font-size:1.7rem;margin-bottom:0.3rem;display:block;}
+.drop-zone p{font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--muted);line-height:1.6;}
+.drop-zone strong{color:var(--accent);font-family:'DM Mono',monospace;font-size:0.62rem;transition:color 0.3s;}
+
+.preview-wrap{position:relative;display:none;}
+.thumb-preview{width:100%;aspect-ratio:16/9;object-fit:contain;border-radius:8px;border:1px solid var(--border);background:#000;display:block;}
+.reset-btn{position:absolute;top:6px;right:6px;background:rgba(0,0,0,0.8);border:1px solid var(--border);color:var(--muted);font-family:'DM Mono',monospace;font-size:0.56rem;padding:3px 8px;border-radius:4px;cursor:pointer;letter-spacing:0.06em;transition:all 0.15s;}
+.reset-btn:hover{border-color:var(--accent3);color:var(--accent3);}
+
+.webcam-wrap{display:none;}
+#webcamVideo{width:100%;aspect-ratio:16/9;border-radius:8px;border:1px solid var(--border);background:#000;object-fit:cover;display:block;}
+.webcam-status{font-family:'DM Mono',monospace;font-size:0.58rem;color:var(--muted);text-align:center;margin-top:5px;}
+.cam-live-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--accent3);margin-right:4px;animation:blink 1s infinite;vertical-align:middle;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.2}}
+.webcam-btn-row{display:flex;gap:4px;margin-top:7px;}
+.cam-btn{flex:1;padding:5px 3px;font-family:'DM Mono',monospace;font-size:0.58rem;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text);cursor:pointer;text-transform:uppercase;transition:all 0.15s;}
+.cam-btn:hover:not(:disabled){border-color:var(--accent);color:var(--accent);}
+.cam-btn.danger:hover:not(:disabled){border-color:var(--accent3);color:var(--accent3);}
+.cam-btn:disabled{opacity:0.3;cursor:not-allowed;}
+
+/* ── CHARSET ── */
+.pill-group{display:flex;flex-wrap:wrap;gap:4px;}
+.pill{font-family:'DM Mono',monospace;font-size:0.6rem;padding:3px 9px;border-radius:100px;border:1px solid var(--border);cursor:pointer;color:var(--muted);background:transparent;transition:all 0.15s;letter-spacing:0.04em;}
+.pill:hover{border-color:var(--accent);color:var(--accent);}
+.pill.active{border-color:var(--accent);background:var(--accent);color:var(--run-fg);}
+.custom-charset-wrap{margin-top:7px;display:none;flex-direction:column;gap:4px;}
+.custom-charset-wrap.visible{display:flex;}
+#customCharset{width:100%;padding:6px 9px;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:'DM Mono',monospace;font-size:0.68rem;outline:none;transition:border-color 0.2s,background 0.3s;}
+#customCharset:focus{border-color:var(--accent);}
+.custom-hint{font-family:'DM Mono',monospace;font-size:0.56rem;color:var(--muted);line-height:1.55;}
+
+/* ── CONTROLS ── */
+.control-group{display:flex;flex-direction:column;gap:0.6rem;}
+.slider-row{display:flex;flex-direction:column;gap:4px;}
+.slider-header{display:flex;justify-content:space-between;align-items:center;}
+.slider-header span{font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--text);}
+.slider-header .val{color:var(--accent);font-weight:500;transition:color 0.3s;}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:3px;background:var(--border);border-radius:2px;outline:none;transition:background 0.3s;}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;border-radius:50%;background:var(--accent);cursor:pointer;box-shadow:0 0 0 3px rgba(var(--accent-rgb),0.18);transition:background 0.3s;}
+.toggle-row{display:flex;align-items:center;justify-content:space-between;}
+.toggle-label{font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--text);}
+.toggle{position:relative;width:34px;height:19px;}
+.toggle input{opacity:0;width:0;height:0;}
+.toggle-slider{position:absolute;inset:0;border-radius:20px;background:var(--border);transition:background 0.2s;cursor:pointer;}
+.toggle-slider::before{content:'';position:absolute;width:13px;height:13px;left:3px;top:3px;border-radius:50%;background:var(--muted);transition:transform 0.2s,background 0.2s;}
+.toggle input:checked+.toggle-slider{background:var(--accent);}
+.toggle input:checked+.toggle-slider::before{transform:translateX(15px);background:var(--run-fg);}
+
+/* ── BUTTONS ── */
+.btn-group{display:flex;flex-direction:column;gap:6px;}
+.run-btn{width:100%;padding:0.68rem;background:var(--accent);color:var(--run-fg);border:none;border-radius:8px;font-family:'Syne',sans-serif;font-size:0.85rem;font-weight:700;cursor:pointer;letter-spacing:0.04em;transition:background 0.2s,transform 0.1s,color 0.3s;}
+.run-btn:hover{background:var(--run-hover);}
+.run-btn:active{transform:scale(0.98);}
+.run-btn:disabled{opacity:0.35;cursor:not-allowed;transform:none;}
+.outline-btn{width:100%;padding:0.55rem;background:transparent;color:var(--text);border:1px solid var(--border);border-radius:8px;font-family:'DM Mono',monospace;font-size:0.62rem;cursor:pointer;letter-spacing:0.06em;text-transform:uppercase;transition:border-color 0.2s,color 0.2s;}
+.outline-btn:hover{border-color:var(--accent2);color:var(--accent2);}
+
+/* ── OUTPUT ── */
+.output-panel{display:flex;flex-direction:column;overflow:hidden;}
+.output-toolbar{padding:0.5rem 1.2rem;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:6px;flex-wrap:wrap;background:var(--surface);transition:background 0.3s,border-color 0.3s;}
+.output-toolbar>span:first-child{font-family:'DM Mono',monospace;font-size:0.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;}
+.badge{background:rgba(var(--accent-rgb),0.12);color:var(--accent);font-family:'DM Mono',monospace;font-size:0.56rem;padding:2px 8px;border-radius:100px;transition:background 0.3s,color 0.3s;}
+.live-badge{display:none;align-items:center;gap:4px;background:rgba(255,107,71,0.12);color:var(--accent3);font-family:'DM Mono',monospace;font-size:0.56rem;padding:2px 8px;border-radius:100px;}
+.live-badge.visible{display:flex;}
+.toolbar-btns{display:flex;gap:4px;margin-left:auto;}
+.tb-btn{background:transparent;font-family:'DM Mono',monospace;font-size:0.6rem;padding:3px 9px;border-radius:6px;cursor:pointer;letter-spacing:0.05em;text-transform:uppercase;transition:all 0.15s;}
+.tb-btn.teal{color:var(--accent2);border:1px solid rgba(71,255,232,0.3);}
+.tb-btn.teal:hover:not(:disabled){background:rgba(71,255,232,0.08);border-color:var(--accent2);}
+.tb-btn.orange{color:var(--accent3);border:1px solid rgba(255,107,71,0.3);}
+.tb-btn.orange:hover:not(:disabled){background:rgba(255,107,71,0.08);border-color:var(--accent3);}
+.tb-btn:disabled{opacity:0.3;cursor:not-allowed;}
+
+.output-scroll{flex:1;overflow:auto;padding:1.2rem;background:var(--ascii-bg);transition:background 0.3s;}
+#ascii-output{font-family:'DM Mono',monospace;font-size:6px;line-height:1.1;white-space:pre;color:var(--ascii-color);display:none;letter-spacing:0.08em;transition:color 0.3s;}
+#ascii-output.colored span{display:inline;}
+.placeholder{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:1rem;color:var(--muted);}
+.placeholder .big{font-size:2.4rem;}
+.placeholder p{font-family:'DM Mono',monospace;font-size:0.65rem;text-align:center;line-height:1.9;}
+canvas{display:none;}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>IMAGE <span>→</span> ASCII</h1>
+  <p>webcam · png export · custom charset</p>
+</header>
+
+<div class="layout">
+<aside class="sidebar">
+
+  <!-- ── THEME ── -->
+  <div>
+    <div class="section-label">Theme</div>
+    <div class="theme-toggle">
+      <span class="theme-toggle-label" id="labelDark">Dark</span>
+      <label class="theme-switch" title="Toggle dark/light">
+        <input type="checkbox" id="themeToggle"/>
+        <span class="theme-track"></span>
+        <span class="theme-thumb"></span>
+      </label>
+      <span class="theme-toggle-label muted" id="labelLight">Light</span>
+    </div>
+  </div>
+
+  <!-- ── SOURCE ── -->
+  <div>
+    <div class="section-label">Source</div>
+    <div class="source-tabs">
+      <button class="src-tab active" id="tabImage">Image</button>
+      <button class="src-tab" id="tabWebcam">Webcam</button>
+    </div>
+    <div id="imageSource">
+      <div class="drop-zone" id="dropZone">
+        <input type="file" id="fileInput" accept="image/*"/>
+        <span class="drop-icon">⬆</span>
+        <p><strong>Click or drop</strong><br>PNG, JPG, GIF, WebP</p>
+      </div>
+      <div class="preview-wrap" id="previewWrap">
+        <img class="thumb-preview" id="thumbPreview" alt="preview"/>
+        <button class="reset-btn" id="resetBtn">✕ Reset</button>
+      </div>
+    </div>
+    <div id="webcamSource" class="webcam-wrap">
+      <video id="webcamVideo" autoplay playsinline muted></video>
+      <p class="webcam-status" id="camStatus">Camera not started</p>
+      <div class="webcam-btn-row">
+        <button class="cam-btn" id="startCamBtn">Start</button>
+        <button class="cam-btn" id="snapBtn" disabled>Snap</button>
+        <button class="cam-btn danger" id="stopCamBtn" disabled>Stop</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── CHARSET ── -->
+  <div>
+    <div class="section-label">Charset</div>
+    <div class="pill-group">
+      <button class="pill active" data-charset="standard">Standard</button>
+      <button class="pill" data-charset="dense">Dense</button>
+      <button class="pill" data-charset="blocks">Blocks</button>
+      <button class="pill" data-charset="minimal">Minimal</button>
+      <button class="pill" data-charset="binary">Binary</button>
+      <button class="pill" data-charset="custom">Custom</button>
+    </div>
+    <div class="custom-charset-wrap" id="customCharsetWrap">
+      <input type="text" id="customCharset" placeholder=" .:-=+*#@%$" value=" .:-=+*#@%$" maxlength="100" spellcheck="false"/>
+      <p class="custom-hint">Light → dark, left to right. Min 2 chars.</p>
+    </div>
+  </div>
+
+  <!-- ── CONTROLS ── -->
+  <div class="control-group">
+    <div class="section-label">Controls</div>
+    <div class="slider-row">
+      <div class="slider-header"><span>Width (chars)</span><span class="val" id="widthVal">120</span></div>
+      <input type="range" id="widthSlider" min="40" max="300" value="120" step="5"/>
+    </div>
+    <div class="slider-row">
+      <div class="slider-header"><span>Contrast</span><span class="val" id="contrastVal">1.0</span></div>
+      <input type="range" id="contrastSlider" min="0.5" max="2.5" value="1.0" step="0.1"/>
+    </div>
+    <div class="slider-row">
+      <div class="slider-header"><span>Brightness</span><span class="val" id="brightnessVal">1.0</span></div>
+      <input type="range" id="brightnessSlider" min="0.5" max="2.0" value="1.0" step="0.1"/>
+    </div>
+    <div class="toggle-row">
+      <span class="toggle-label">Invert</span>
+      <label class="toggle"><input type="checkbox" id="invertToggle"/><span class="toggle-slider"></span></label>
+    </div>
+    <div class="toggle-row">
+      <span class="toggle-label">Color mode</span>
+      <label class="toggle"><input type="checkbox" id="colorToggle"/><span class="toggle-slider"></span></label>
+    </div>
+  </div>
+
+  <div class="btn-group">
+    <button class="run-btn" id="convertBtn" disabled>Convert →</button>
+    <button class="outline-btn" id="copyBtn">Copy ASCII</button>
+  </div>
+
+</aside>
+
+<main class="output-panel">
+  <div class="output-toolbar">
+    <span>Output</span>
+    <span class="badge" id="dimBadge">—</span>
+    <div class="live-badge" id="liveBadge"><span class="cam-live-dot"></span>live</div>
+    <div class="toolbar-btns">
+      <button class="tb-btn teal" id="saveTxtBtn" disabled>Save .txt</button>
+      <button class="tb-btn orange" id="savePngBtn" disabled>Export PNG</button>
+    </div>
+  </div>
+  <div class="output-scroll">
+    <div class="placeholder" id="placeholder">
+      <div class="big">◻</div>
+      <p>Upload an image or use webcam,<br>then hit <strong>Convert →</strong></p>
+    </div>
+    <pre id="ascii-output"></pre>
+  </div>
+</main>
+</div>
+
+<canvas id="hiddenCanvas"></canvas>
+<canvas id="exportCanvas"></canvas>
+
+<script>
+/* ── CHARSETS ── */
+const CHARSETS = {
+  standard:" .'`^\",:;Il!i><~+_-?][}{1)(|/tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$",
+  dense:   " ░▒▓█",
+  blocks:  " .:!|l1IYXeoa#@",
+  minimal: " .-+*#@",
+  binary:  " 01",
+  custom:  " .:-=+*#@%$"
+};
+
+/* ── STATE ── */
+let currentCharset = 'standard';
+let currentImage   = null;
+let lastPlainText  = '';
+let webcamStream   = null;
+let liveInterval   = null;
+let activeSource   = 'image';
+let lastRenderData = null;
+
+/* ── ELEMENT REFS ── */
+const $ = id => document.getElementById(id);
+const fileInput      = $('fileInput');
+const dropZone       = $('dropZone');
+const thumbPreview   = $('thumbPreview');
+const previewWrap    = $('previewWrap');
+const resetBtn       = $('resetBtn');
+const convertBtn     = $('convertBtn');
+const copyBtn        = $('copyBtn');
+const saveTxtBtn     = $('saveTxtBtn');
+const savePngBtn     = $('savePngBtn');
+const output         = $('ascii-output');
+const placeholder    = $('placeholder');
+const canvas         = $('hiddenCanvas');
+const exportCanvas   = $('exportCanvas');
+const ctx            = canvas.getContext('2d');
+const dimBadge       = $('dimBadge');
+const liveBadge      = $('liveBadge');
+const customCharsetWrap  = $('customCharsetWrap');
+const customInput        = $('customCharset');
+const webcamVideo        = $('webcamVideo');
+const camStatus          = $('camStatus');
+const startCamBtn        = $('startCamBtn');
+const snapBtn            = $('snapBtn');
+const stopCamBtn         = $('stopCamBtn');
+const widthSlider        = $('widthSlider');
+const contrastSlider     = $('contrastSlider');
+const brightnessSlider   = $('brightnessSlider');
+const invertToggle       = $('invertToggle');
+const colorToggle        = $('colorToggle');
+
+/* ── THEME TOGGLE ── */
+let currentTheme = 'dark';
+
+const themeToggle = $('themeToggle');
+const labelDark   = $('labelDark');
+const labelLight  = $('labelLight');
+
+function applyTheme(name) {
+  currentTheme = name;
+  if (name === 'light') {
+    document.body.dataset.theme = 'light';
+    themeToggle.checked = true;
+    labelDark.classList.add('muted');
+    labelLight.classList.remove('muted');
+  } else {
+    document.body.removeAttribute('data-theme');
+    themeToggle.checked = false;
+    labelDark.classList.remove('muted');
+    labelLight.classList.add('muted');
+  }
+}
+
+themeToggle.addEventListener('change', () => {
+  applyTheme(themeToggle.checked ? 'light' : 'dark');
+});
+
+/* ── SLIDER READOUTS ── */
+widthSlider.addEventListener('input', () => { $('widthVal').textContent = widthSlider.value; });
+contrastSlider.addEventListener('input', () => { $('contrastVal').textContent = parseFloat(contrastSlider.value).toFixed(1); });
+brightnessSlider.addEventListener('input', () => { $('brightnessVal').textContent = parseFloat(brightnessSlider.value).toFixed(1); });
+
+/* ── SOURCE TABS ── */
+$('tabImage').addEventListener('click',  () => switchSource('image'));
+$('tabWebcam').addEventListener('click', () => switchSource('webcam'));
+
+function switchSource(src) {
+  activeSource = src;
+  $('tabImage').classList.toggle('active',  src==='image');
+  $('tabWebcam').classList.toggle('active', src==='webcam');
+  $('imageSource').style.display   = src==='image'   ? 'block' : 'none';
+  $('webcamSource').style.display  = src==='webcam'  ? 'block' : 'none';
+  if (src==='image')  { stopLiveMode(); convertBtn.disabled = !currentImage; convertBtn.textContent = 'Convert →'; }
+  else                { convertBtn.disabled = !webcamStream; convertBtn.textContent = liveInterval ? 'Stop live' : 'Convert →'; }
+}
+switchSource('image');
+
+/* ── CHARSET PILLS ── */
+document.querySelectorAll('.pill[data-charset]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.pill[data-charset]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentCharset = btn.dataset.charset;
+    customCharsetWrap.classList.toggle('visible', currentCharset==='custom');
+  });
+});
+customInput.addEventListener('input', () => { CHARSETS.custom = customInput.value.length >= 2 ? customInput.value : ' @'; });
+
+/* ── IMAGE LOAD ── */
+function loadImage(file) {
+  if (!file || !file.type.startsWith('image/')) return;
+  const url = URL.createObjectURL(file);
+  const img = new Image();
+  img.onload = () => {
+    currentImage = img;
+    thumbPreview.src = url;
+    dropZone.style.display = 'none';
+    previewWrap.style.display = 'block';
+    convertBtn.disabled = false;
+  };
+  img.src = url;
+}
+fileInput.addEventListener('change', e => loadImage(e.target.files[0]));
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('drag-over'); loadImage(e.dataTransfer.files[0]); });
+
+/* ── RESET ── */
+resetBtn.addEventListener('click', () => {
+  currentImage = lastPlainText = null; lastRenderData = null;
+  thumbPreview.src = ''; previewWrap.style.display = 'none';
+  dropZone.style.display = 'block'; fileInput.value = '';
+  convertBtn.disabled = saveTxtBtn.disabled = savePngBtn.disabled = true;
+  output.style.display = 'none'; output.textContent = ''; output.innerHTML = '';
+  placeholder.style.display = 'flex'; dimBadge.textContent = '—';
+  lastPlainText = '';
+});
+
+/* ── WEBCAM ── */
+startCamBtn.addEventListener('click', async () => {
+  try {
+    webcamStream = await navigator.mediaDevices.getUserMedia({ video: { width:1280, height:720 } });
+    webcamVideo.srcObject = webcamStream;
+    camStatus.innerHTML = '<span class="cam-live-dot"></span> Camera active';
+    startCamBtn.disabled = true; snapBtn.disabled = false; stopCamBtn.disabled = false;
+    convertBtn.disabled = false; convertBtn.textContent = 'Convert →';
+  } catch(e) { camStatus.textContent = 'Camera access denied'; }
+});
+
+snapBtn.addEventListener('click', () => {
+  if (!webcamStream) return;
+  stopLiveMode();
+  const tmp = document.createElement('canvas');
+  tmp.width = webcamVideo.videoWidth||640; tmp.height = webcamVideo.videoHeight||360;
+  tmp.getContext('2d').drawImage(webcamVideo, 0, 0, tmp.width, tmp.height);
+  const img = new Image();
+  img.onload = () => { currentImage = img; convert(); };
+  img.src = tmp.toDataURL();
+  convertBtn.textContent = 'Convert →';
+});
+
+stopCamBtn.addEventListener('click', stopWebcam);
+function stopWebcam() {
+  stopLiveMode();
+  if (webcamStream) { webcamStream.getTracks().forEach(t=>t.stop()); webcamStream=null; }
+  webcamVideo.srcObject = null;
+  camStatus.textContent = 'Camera stopped';
+  startCamBtn.disabled=false; snapBtn.disabled=true; stopCamBtn.disabled=true;
+  convertBtn.disabled=true; convertBtn.textContent='Convert →';
+}
+function stopLiveMode() {
+  if (liveInterval) { clearInterval(liveInterval); liveInterval=null; }
+  liveBadge.classList.remove('visible');
+  if (activeSource==='webcam') convertBtn.textContent='Convert →';
+}
+
+/* ── PIXEL ADJUST ── */
+function applyAdjust(r,g,b,contrast,brightness,invert) {
+  let nr=(r*brightness-128)*contrast+128, ng=(g*brightness-128)*contrast+128, nb=(b*brightness-128)*contrast+128;
+  if (invert){ nr=255-nr; ng=255-ng; nb=255-nb; }
+  return [Math.max(0,Math.min(255,nr)), Math.max(0,Math.min(255,ng)), Math.max(0,Math.min(255,nb))];
+}
+
+function getChars() {
+  return currentCharset==='custom' ? (customInput.value.length>=2 ? customInput.value : ' @') : CHARSETS[currentCharset];
+}
+
+function getSource() {
+  return (activeSource==='webcam' && webcamStream) ? webcamVideo : currentImage;
+}
+
+/* ── CONVERT ── */
+function convert() {
+  const src = getSource();
+  if (!src) return;
+
+  const charWidth   = parseInt(widthSlider.value);
+  const contrast    = parseFloat(contrastSlider.value);
+  const brightness  = parseFloat(brightnessSlider.value);
+  const invert      = invertToggle.checked;
+  const colorMode   = colorToggle.checked;
+  const chars       = getChars();
+
+  const srcW = src.videoWidth||src.naturalWidth||src.width||640;
+  const srcH = src.videoHeight||src.naturalHeight||src.height||360;
+  const charHeight = Math.round(charWidth*(srcH/srcW)*0.45);
+
+  canvas.width=charWidth; canvas.height=charHeight;
+  ctx.drawImage(src, 0, 0, charWidth, charHeight);
+
+  const imageData = ctx.getImageData(0, 0, charWidth, charHeight);
+  const pixels    = imageData.data;
+
+  lastRenderData = { charWidth, charHeight, chars, pixels: new Uint8ClampedArray(pixels), contrast, brightness, invert, colorMode };
+
+  if (colorMode) {
+    let html='';
+    for (let y=0;y<charHeight;y++) {
+      for (let x=0;x<charWidth;x++) {
+        const i=(y*charWidth+x)*4;
+        const [r,g,b]=applyAdjust(pixels[i],pixels[i+1],pixels[i+2],contrast,brightness,invert);
+        const lum=0.299*r+0.587*g+0.114*b;
+        const ch=chars[Math.floor((lum/255)*(chars.length-1))];
+        html+=`<span style="color:rgb(${Math.round(r)},${Math.round(g)},${Math.round(b)})">${ch===' '?'&nbsp;':ch}</span>`;
+      }
+      html+='\n';
+    }
+    output.classList.add('colored'); output.innerHTML=html;
+    lastPlainText=buildPlain(pixels,charWidth,charHeight,chars,contrast,brightness,invert);
+  } else {
+    output.classList.remove('colored');
+    lastPlainText=buildPlain(pixels,charWidth,charHeight,chars,contrast,brightness,invert);
+    output.textContent=lastPlainText;
+  }
+
+  placeholder.style.display='none'; output.style.display='block';
+  dimBadge.textContent=`${charWidth} × ${charHeight}`;
+  saveTxtBtn.disabled=savePngBtn.disabled=false;
+}
+
+function buildPlain(pixels,charWidth,charHeight,chars,contrast,brightness,invert) {
+  let text='';
+  for (let y=0;y<charHeight;y++) {
+    for (let x=0;x<charWidth;x++) {
+      const i=(y*charWidth+x)*4;
+      const [r,g,b]=applyAdjust(pixels[i],pixels[i+1],pixels[i+2],contrast,brightness,invert);
+      const lum=0.299*r+0.587*g+0.114*b;
+      text+=chars[Math.floor((lum/255)*(chars.length-1))];
+    }
+    text+='\n';
+  }
+  return text;
+}
+
+/* ── CONVERT BUTTON ── */
+convertBtn.addEventListener('click', () => {
+  if (activeSource==='webcam' && webcamStream) {
+    if (liveInterval) { stopLiveMode(); convertBtn.textContent='Convert →'; }
+    else { convert(); liveInterval=setInterval(convert,120); liveBadge.classList.add('visible'); convertBtn.textContent='Stop live'; }
+  } else { convert(); }
+});
+
+/* ── COPY ── */
+copyBtn.addEventListener('click', () => {
+  if (!lastPlainText) return;
+  navigator.clipboard.writeText(lastPlainText).then(()=>{ copyBtn.textContent='Copied!'; setTimeout(()=>copyBtn.textContent='Copy ASCII',1500); });
+});
+
+/* ── SAVE TXT ── */
+saveTxtBtn.addEventListener('click', () => {
+  if (!lastPlainText) return;
+  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([lastPlainText],{type:'text/plain'}));
+  a.download='ascii-art.txt'; a.click();
+});
+
+/* ── EXPORT PNG ── */
+savePngBtn.addEventListener('click', () => {
+  if (!lastRenderData) return;
+  const {charWidth,charHeight,chars,pixels,contrast,brightness,invert,colorMode}=lastRenderData;
+  const FONT_PX=9, CHAR_W=6, LINE_H=10;
+  exportCanvas.width=charWidth*CHAR_W; exportCanvas.height=charHeight*LINE_H;
+  const ectx=exportCanvas.getContext('2d');
+
+  // Background from current theme
+  const bgStyle = getComputedStyle(document.documentElement).getPropertyValue('--ascii-bg').trim() || '#0d0d0d';
+  ectx.fillStyle = bgStyle;
+  ectx.fillRect(0,0,exportCanvas.width,exportCanvas.height);
+  ectx.font=`${FONT_PX}px "Courier New",monospace`; ectx.textBaseline='top';
+
+  const fgColor = getComputedStyle(document.documentElement).getPropertyValue('--ascii-color').trim() || '#f0f0f0';
+
+  for (let y=0;y<charHeight;y++) {
+    for (let x=0;x<charWidth;x++) {
+      const i=(y*charWidth+x)*4;
+      const [r,g,b]=applyAdjust(pixels[i],pixels[i+1],pixels[i+2],contrast,brightness,invert);
+      const lum=0.299*r+0.587*g+0.114*b;
+      const ch=chars[Math.floor((lum/255)*(chars.length-1))];
+      if (ch===' ') continue;
+      ectx.fillStyle = colorMode ? `rgb(${Math.round(r)},${Math.round(g)},${Math.round(b)})` : fgColor;
+      ectx.fillText(ch, x*CHAR_W, y*LINE_H);
+    }
+  }
+
+  exportCanvas.toBlob(blob=>{ const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='ascii-art.png'; a.click(); },'image/png');
+});
+</script>
+</body>
+</html>
