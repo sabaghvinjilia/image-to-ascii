@@ -26,15 +26,27 @@
   --run-fg:#fff;--run-hover:#333;
   --ascii-color:#1a1a1a;--ascii-bg:#f4f3ef;
 }
-html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;transition:background .3s,color .3s;}
 
-/* ── HEADER (shared) ── */
+/* ── ROOT: lock entire viewport, no page scroll ever ── */
+html,body{
+  height:100%;width:100%;
+  overflow:hidden;          /* kill ALL page-level scroll */
+  background:var(--bg);
+  color:var(--text);
+  font-family:'Syne',sans-serif;
+  transition:background .3s,color .3s;
+}
+
+/* ── HEADER (shared, always on top) ── */
 header{
-  height:var(--hh);padding:0 1.25rem;
+  height:var(--hh);
+  padding:0 1.25rem;
   display:flex;align-items:center;justify-content:space-between;
   background:var(--surface);border-bottom:1px solid var(--border);
   transition:background .3s,border-color .3s;
-  position:sticky;top:0;z-index:200;flex-shrink:0;
+  flex-shrink:0;
+  /* on mobile header is part of the fixed stack; on desktop it's the first row */
+  position:relative;z-index:50;
 }
 .hl{display:flex;align-items:baseline;gap:.6rem;}
 header h1{font-size:1.15rem;font-weight:800;letter-spacing:-.03em;white-space:nowrap;}
@@ -42,6 +54,8 @@ header h1 span{color:var(--accent);transition:color .3s;}
 header sub{font-family:'DM Mono',monospace;font-size:.52rem;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;display:none;}
 @media(min-width:640px){header sub{display:block;}}
 .hr{display:flex;align-items:center;gap:.75rem;}
+
+/* Theme toggle */
 .thm{display:flex;align-items:center;gap:5px;}
 .tl{font-family:'DM Mono',monospace;font-size:.56rem;color:var(--muted);white-space:nowrap;transition:color .3s;}
 .tl.on{color:var(--text);}
@@ -52,12 +66,14 @@ header sub{font-family:'DM Mono',monospace;font-size:.52rem;color:var(--muted);l
 .tth{position:absolute;top:3px;left:3px;width:12px;height:12px;border-radius:50%;background:#fff;transition:transform .25s,background .25s;pointer-events:none;}
 [data-theme="light"] .tth{transform:translateX(16px);background:#1a1a1a;}
 
-/* ════════════════════════════════════
+/* ══════════════════════════════════════
    DESKTOP ≥768px — DO NOT TOUCH
-════════════════════════════════════ */
-.desk{display:none;height:calc(100vh - var(--hh));}
+══════════════════════════════════════ */
+.desk{
+  display:none;
+  height:calc(100vh - var(--hh));
+}
 @media(min-width:768px){
-  body{overflow:hidden;}
   .desk{display:flex;}
   .mob{display:none!important;}
 }
@@ -139,28 +155,37 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;heigh
 .ph .bi{font-size:2.4rem;}
 .ph p{font-family:'DM Mono',monospace;font-size:.63rem;text-align:center;line-height:2;}
 
-/* ════════════════════════════════════
+/* ══════════════════════════════════════
    MOBILE <768px
-   Full-height flex column:
-   header (sticky) → scrollable content → static bottom bar
-════════════════════════════════════ */
+   Fixed full-viewport stack:
+     header  →  .mob (flex column, position:fixed, fills remainder)
+                  .mpgs (flex:1, overflow:hidden, position:relative)
+                    .mpg (absolute, inset:0, overflow-y:auto per page)
+                  .mnav (flex-shrink:0, always visible at bottom)
+══════════════════════════════════════ */
+
+/* The mobile shell is fixed to the viewport below the header.
+   This is the only reliable cross-browser way to prevent
+   the bottom bar from scrolling on iOS Safari.              */
 .mob{
   display:flex;
   flex-direction:column;
-  /* fill exactly the remaining viewport below the sticky header */
-  height:calc(100vh - var(--hh));
-  overflow:hidden;
+  position:fixed;
+  top:var(--hh);      /* sit right below header */
+  left:0;right:0;bottom:0;
+  overflow:hidden;    /* no scroll on the shell */
+  background:var(--bg);
 }
 
-/* scrollable step area */
+/* container for the 3 pages — fills remaining space above nav */
 .mpgs{
   flex:1;
   overflow:hidden;
   position:relative;
-  /* contain the absolutely positioned pages */
+  min-height:0;       /* essential: prevents flex child from overflowing */
 }
 
-/* each step page fills the scroll area */
+/* each page is absolutely positioned and fills mpgs */
 .mpg{
   position:absolute;
   inset:0;
@@ -168,31 +193,39 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;heigh
   -webkit-overflow-scrolling:touch;
   display:flex;
   flex-direction:column;
-  padding:1.2rem 1.2rem 1.4rem;
+  padding:1.2rem;
   gap:1rem;
   background:var(--bg);
-  /* animated in/out */
+  /* hidden state */
   opacity:0;
   pointer-events:none;
   transform:translateX(40px);
-  transition:opacity .2s ease, transform .2s ease;
+  transition:opacity .22s ease,transform .22s ease;
 }
-.mpg.act{opacity:1;pointer-events:auto;transform:translateX(0);}
-.mpg.prev{opacity:0;transform:translateX(-40px);pointer-events:none;}
+.mpg.act{
+  opacity:1;
+  pointer-events:auto;
+  transform:translateX(0);
+}
+.mpg.prev{
+  opacity:0;
+  pointer-events:none;
+  transform:translateX(-40px);
+}
 
 /* ── STATIC BOTTOM NAV ── */
 .mnav{
-  flex-shrink:0;           /* never squished */
+  flex-shrink:0;
   display:flex;
   align-items:center;
   justify-content:space-between;
-  padding:.75rem 1.1rem;
-  padding-bottom:max(.75rem, env(safe-area-inset-bottom));
+  padding:.72rem 1.1rem;
+  /* respect iOS home bar */
+  padding-bottom:max(.72rem, env(safe-area-inset-bottom));
   background:var(--surface);
   border-top:1px solid var(--border);
   gap:.5rem;
   transition:background .3s,border-color .3s;
-  /* keep above page content */
   position:relative;
   z-index:10;
 }
@@ -200,8 +233,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;heigh
 .mdot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:background .25s,width .25s,border-radius .25s;}
 .mdot.act{width:20px;border-radius:4px;background:var(--accent);}
 .mbk,.mnxt{
-  padding:.6rem 1.15rem;
-  border-radius:8px;cursor:pointer;
+  padding:.6rem 1.15rem;border-radius:8px;cursor:pointer;
   font-family:'DM Mono',monospace;font-size:.7rem;
   letter-spacing:.04em;text-transform:uppercase;
   transition:all .15s;border:1px solid var(--border);
@@ -218,44 +250,39 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;heigh
 .mnxt:hover{background:var(--run-hover);}
 .mnxt:disabled{opacity:.35;cursor:not-allowed;}
 
-/* mobile section heading */
+/* ── mobile step typography ── */
 .mhd{font-size:1.05rem;font-weight:800;letter-spacing:-.02em;line-height:1.2;}
 .msub{font-family:'DM Mono',monospace;font-size:.6rem;color:var(--muted);line-height:1.65;margin-top:.15rem;}
 
-/* source tabs */
+/* ── source tabs ── */
 .mst{display:flex;gap:5px;}
 .mstb{flex:1;padding:.65rem;font-family:'DM Mono',monospace;font-size:.68rem;text-transform:uppercase;letter-spacing:.04em;border:1px solid var(--border);background:transparent;color:var(--muted);border-radius:8px;cursor:pointer;transition:all .15s;text-align:center;touch-action:manipulation;}
 .mstb.on{background:var(--accent);color:var(--run-fg);border-color:var(--accent);}
 
-/* upload zone */
-.muz{
-  border:1.5px dashed var(--border);border-radius:12px;
-  padding:2rem 1rem;text-align:center;cursor:pointer;
-  transition:border-color .2s,background .2s;position:relative;
-  background:var(--surface);
-}
+/* ── upload zone ── */
+.muz{border:1.5px dashed var(--border);border-radius:12px;padding:1.8rem 1rem;text-align:center;cursor:pointer;transition:border-color .2s,background .2s;position:relative;background:var(--surface);}
 .muz.ok{border-style:solid;border-color:var(--accent);}
 .muz input{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer;}
 .mui{font-size:2.2rem;display:block;margin-bottom:.5rem;}
 .muz p{font-family:'DM Mono',monospace;font-size:.68rem;color:var(--muted);line-height:1.7;}
 .muz strong{color:var(--accent);}
-.mth{width:100%;border-radius:10px;border:1px solid var(--border);display:none;margin-top:.75rem;max-height:220px;object-fit:contain;background:#000;}
+.mth{width:100%;border-radius:10px;border:1px solid var(--border);display:none;margin-top:.75rem;max-height:200px;object-fit:contain;background:#000;}
 .mth.vis{display:block;}
 .mrr{display:none;justify-content:flex-end;margin-top:.4rem;}
 .mrr.vis{display:flex;}
 .mrb{background:transparent;border:1px solid var(--border);color:var(--muted);font-family:'DM Mono',monospace;font-size:.6rem;padding:5px 12px;border-radius:5px;cursor:pointer;transition:all .15s;touch-action:manipulation;}
 .mrb:hover{border-color:var(--accent3);color:var(--accent3);}
 
-/* live camera view */
-.mcv{width:100%;border-radius:10px;border:1px solid var(--border);background:#000;max-height:220px;object-fit:cover;display:block;}
-.mcs{font-family:'DM Mono',monospace;font-size:.63rem;color:var(--muted);text-align:center;margin:.45rem 0;}
+/* ── camera ── */
+.mcv{width:100%;border-radius:10px;border:1px solid var(--border);background:#000;max-height:200px;object-fit:cover;display:block;}
+.mcs{font-family:'DM Mono',monospace;font-size:.62rem;color:var(--muted);text-align:center;margin:.4rem 0;}
 .mcr{display:flex;gap:6px;}
-.mcb{flex:1;padding:.65rem;border:1px solid var(--border);background:transparent;color:var(--text);border-radius:8px;font-family:'DM Mono',monospace;font-size:.66rem;text-transform:uppercase;cursor:pointer;transition:all .15s;touch-action:manipulation;}
+.mcb{flex:1;padding:.65rem;border:1px solid var(--border);background:transparent;color:var(--text);border-radius:8px;font-family:'DM Mono',monospace;font-size:.64rem;text-transform:uppercase;cursor:pointer;transition:all .15s;touch-action:manipulation;}
 .mcb:disabled{opacity:.3;cursor:not-allowed;}
 .mcb.live-on{background:var(--accent3);color:#fff;border-color:var(--accent3);}
 .mcb.dng{border-color:var(--accent3);color:var(--accent3);}
 
-/* settings cards */
+/* ── settings cards ── */
 .mcard{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:.9rem;}
 .mct{font-family:'DM Mono',monospace;font-size:.58rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:.6rem;}
 .mpg2{display:flex;flex-wrap:wrap;gap:6px;}
@@ -279,29 +306,52 @@ input.mr::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:26px;bo
 .mtg input:checked+.mtgs{background:var(--accent);}
 .mtg input:checked+.mtgs::before{transform:translateX(19px);background:var(--run-fg);}
 
-/* result page */
+/* ── result page ── */
+/* mrsp fills remaining flex space and scrolls internally */
 .mrsp{
   flex:1;
+  min-height:0;          /* critical: prevents flex overflow */
   overflow:auto;
+  -webkit-overflow-scrolling:touch;
   background:var(--ascii-bg);
   border-radius:10px;
   transition:background .3s;
-  -webkit-overflow-scrolling:touch;
-  /* give it a min height so it doesn't collapse */
-  min-height:100px;
+  /* center the ascii art inside */
+  display:flex;
+  align-items:center;
+  justify-content:center;
 }
-.mrsp-inner{padding:.75rem;}
-#mao{font-family:'DM Mono',monospace;font-size:5px;line-height:1.1;white-space:pre;color:var(--ascii-color);display:none;letter-spacing:.08em;}
+/* when content is taller than container, revert to top align for scrolling */
+.mrsp.has-content{
+  align-items:flex-start;
+  justify-content:flex-start;
+}
+.mrsp-inner{
+  padding:.75rem;
+  /* center within scroll area */
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  min-width:100%;
+  min-height:100%;
+}
+#mao{
+  font-family:'DM Mono',monospace;font-size:5px;line-height:1.1;
+  white-space:pre;color:var(--ascii-color);display:none;letter-spacing:.08em;
+}
 #mao.col span{display:inline;}
-.mph{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:120px;gap:.5rem;color:var(--muted);}
+.mph{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  min-height:100px;gap:.5rem;color:var(--muted);
+  width:100%;
+}
 .mph p{font-family:'DM Mono',monospace;font-size:.62rem;text-align:center;line-height:1.8;}
-.mir{display:flex;align-items:center;gap:6px;}
+.mir{display:flex;align-items:center;gap:6px;flex-shrink:0;}
 .mbdg{background:rgba(var(--accent-rgb),.1);color:var(--accent);font-family:'DM Mono',monospace;font-size:.55rem;padding:2px 8px;border-radius:100px;}
 .mlive{display:none;align-items:center;gap:4px;background:rgba(255,107,71,.1);color:var(--accent3);font-family:'DM Mono',monospace;font-size:.55rem;padding:2px 8px;border-radius:100px;}
 .mlive.vis{display:flex;}
-/* result action row — at bottom of page 3 */
 .mar{display:flex;gap:6px;flex-wrap:wrap;flex-shrink:0;}
-.mab{flex:1;min-width:70px;padding:.68rem .5rem;border-radius:8px;font-family:'DM Mono',monospace;font-size:.66rem;text-transform:uppercase;letter-spacing:.04em;cursor:pointer;transition:all .15s;touch-action:manipulation;text-align:center;border:1px solid var(--border);background:transparent;color:var(--text);}
+.mab{flex:1;min-width:70px;padding:.68rem .5rem;border-radius:8px;font-family:'DM Mono',monospace;font-size:.65rem;text-transform:uppercase;letter-spacing:.04em;cursor:pointer;transition:all .15s;touch-action:manipulation;text-align:center;border:1px solid var(--border);background:transparent;color:var(--text);}
 .mab:hover{border-color:var(--accent);color:var(--accent);}
 .mab:disabled{opacity:.3;cursor:not-allowed;}
 
@@ -313,7 +363,7 @@ canvas{display:none;}
 </head>
 <body>
 
-<!-- SHARED HEADER — sticky -->
+<!-- HEADER -->
 <header>
   <div class="hl">
     <h1>IMG <span>→</span> ASCII</h1>
@@ -354,7 +404,7 @@ canvas{display:none;}
       </div>
       <div id="dCamSrc" class="ww">
         <video class="wv" id="dVid" autoplay playsinline muted></video>
-        <p class="ws" id="dCS">Camera not started</p>
+        <p class="ws" id="dCamSt">Camera not started</p>
         <div class="cbr">
           <button class="cb" id="dStart">Start</button>
           <button class="cb" id="dSnap" disabled>Snap</button>
@@ -428,10 +478,9 @@ canvas{display:none;}
 <!-- ══════════ MOBILE ══════════ -->
 <div class="mob">
 
-  <!-- scrollable step pages -->
   <div class="mpgs">
 
-    <!-- STEP 1: source -->
+    <!-- PAGE 1: source -->
     <div class="mpg act" id="mp1">
       <div class="mhd">Choose source</div>
       <p class="msub">Pick a photo or use your camera for live ASCII.</p>
@@ -439,8 +488,6 @@ canvas{display:none;}
         <button class="mstb on" id="mTabImg">Photo</button>
         <button class="mstb" id="mTabCam">Camera</button>
       </div>
-
-      <!-- photo upload -->
       <div id="mImgSrc">
         <div class="muz" id="mDZ">
           <input type="file" id="mFI" accept="image/*"/>
@@ -450,8 +497,6 @@ canvas{display:none;}
         <img class="mth" id="mTh" alt=""/>
         <div class="mrr" id="mRR"><button class="mrb" id="mRB">✕ Remove</button></div>
       </div>
-
-      <!-- camera -->
       <div id="mCamSrc" style="display:none">
         <video class="mcv" id="mVid" autoplay playsinline muted></video>
         <p class="mcs" id="mCS">Tap Start to activate camera</p>
@@ -463,7 +508,7 @@ canvas{display:none;}
       </div>
     </div>
 
-    <!-- STEP 2: settings -->
+    <!-- PAGE 2: settings -->
     <div class="mpg" id="mp2">
       <div class="mhd">Settings</div>
       <p class="msub">Adjust style — or keep defaults and hit Convert.</p>
@@ -500,20 +545,18 @@ canvas{display:none;}
       </div>
     </div>
 
-    <!-- STEP 3: result -->
+    <!-- PAGE 3: result -->
     <div class="mpg" id="mp3">
       <div class="mir">
         <span class="mbdg" id="mDim">—</span>
         <div class="mlive" id="mLiveBadge"><span class="ld"></span>live</div>
       </div>
-      <!-- scrollable ASCII output -->
       <div class="mrsp" id="mRS">
-        <div class="mrsp-inner">
+        <div class="mrsp-inner" id="mRSInner">
           <div class="mph" id="mPH"><p>Converting…</p></div>
           <pre id="mao"></pre>
         </div>
       </div>
-      <!-- action buttons -->
       <div class="mar">
         <button class="mab" id="mCopy">Copy</button>
         <button class="mab" id="mPng" disabled>Save PNG</button>
@@ -523,7 +566,7 @@ canvas{display:none;}
 
   </div>
 
-  <!-- STATIC BOTTOM NAV -->
+  <!-- STATIC BOTTOM NAV — outside .mpgs, always at bottom of .mob -->
   <div class="mnav">
     <button class="mbk" id="mBack" style="visibility:hidden">Back</button>
     <div class="mdots">
@@ -558,8 +601,15 @@ let lastPlain='', lastRD=null;
 /* ── THEME ── */
 const thmEl=$('thm'), lDark=$('lDark'), lLight=$('lLight');
 function setTheme(light){
-  if(light){document.body.dataset.theme='light';thmEl.checked=true;lDark.classList.remove('on');lLight.classList.add('on');}
-  else{document.body.removeAttribute('data-theme');thmEl.checked=false;lDark.classList.add('on');lLight.classList.remove('on');}
+  if(light){
+    document.body.dataset.theme='light';
+    thmEl.checked=true;
+    lDark.classList.remove('on'); lLight.classList.add('on');
+  } else {
+    document.body.removeAttribute('data-theme');
+    thmEl.checked=false;
+    lDark.classList.add('on'); lLight.classList.remove('on');
+  }
 }
 thmEl.addEventListener('change',()=>setTheme(thmEl.checked));
 
@@ -567,21 +617,20 @@ thmEl.addEventListener('change',()=>setTheme(thmEl.checked));
 function pixAdj(r,g,b,con,bri,inv){
   let nr=(r*bri-128)*con+128, ng=(g*bri-128)*con+128, nb=(b*bri-128)*con+128;
   if(inv){nr=255-nr;ng=255-ng;nb=255-nb;}
-  return[Math.max(0,Math.min(255,nr|0)),Math.max(0,Math.min(255,ng|0)),Math.max(0,Math.min(255,nb|0))];
+  return[
+    Math.max(0,Math.min(255,nr|0)),
+    Math.max(0,Math.min(255,ng|0)),
+    Math.max(0,Math.min(255,nb|0))
+  ];
 }
 
-/**
- * Convert a source (image/video) to ASCII.
- * charWidth is computed from the source's own pixel dimensions:
- *   charWidth  = targetChars  (user slider)
- *   charHeight = round(charWidth * (srcH/srcW) * 0.45)
- * This preserves the original aspect ratio exactly.
- */
-function doConvert(src, maxCW, con, bri, inv, colMode, chars){
-  const sw = src.videoWidth  || src.naturalWidth  || src.width  || 640;
-  const sh = src.videoHeight || src.naturalHeight || src.height || 360;
-  const cw = maxCW;
-  const ch = Math.round(cw * (sh / sw) * 0.45); // 0.45 corrects for char cell aspect ratio
+function doConvert(src, cw, con, bri, inv, colMode, chars){
+  /* Always derive charHeight from the source's own pixel dimensions
+     to preserve the original aspect ratio exactly.
+     0.45 corrects for monospace cell height ≈ 2× width.          */
+  const sw=src.videoWidth||src.naturalWidth||src.width||640;
+  const sh=src.videoHeight||src.naturalHeight||src.height||360;
+  const ch=Math.max(1, Math.round(cw*(sh/sw)*0.45));
 
   hc.width=cw; hc.height=ch;
   hctx.drawImage(src,0,0,cw,ch);
@@ -643,7 +692,7 @@ function doPng(){
   const conv=$('dConv'), copy=$('dCopy'), txt=$('dTxt'), png=$('dPng');
   const dao=$('dao'), dph=$('dPH'), dDim=$('dDim'), dLB=$('dLB');
   const dDZ=$('dDZ'), dFI=$('dFI'), dPW=$('dPW'), dThumb=$('dThumb');
-  const dVid=$('dVid'), dCSEl=$('dCS');
+  const dVid=$('dVid'), dCamSt=$('dCamSt');
   const dWS=$('dWS'), dCS2=$('dCS2'), dBS=$('dBS'), dInv=$('dInv'), dCol=$('dCol');
   const dCC=$('dCC'), dCCW=$('dCCW');
 
@@ -652,6 +701,8 @@ function doPng(){
     return cs==='custom'?(dCC.value.length>=2?dCC.value:' @'):CS[cs];
   }
   function getSrc(){
+    /* After snap, dSrc is set to 'image' so dSnapped is always used.
+       Live mode: dSrc='webcam' and dLive is active → use video.     */
     if(dSrc==='webcam'&&dStream&&dLive) return dVid;
     return dSnapped;
   }
@@ -670,20 +721,20 @@ function doPng(){
     txt.disabled=png.disabled=false;
   }
 
-  dWS.addEventListener('input',()=>$('dWV').textContent=dWS.value);
-  dCS2.addEventListener('input',()=>$('dCV').textContent=parseFloat(dCS2.value).toFixed(1));
-  dBS.addEventListener('input',()=>$('dBV').textContent=parseFloat(dBS.value).toFixed(1));
+  $('dWS').addEventListener('input',()=>$('dWV').textContent=dWS.value);
+  $('dCS2').addEventListener('input',()=>$('dCV').textContent=parseFloat(dCS2.value).toFixed(1));
+  $('dBS').addEventListener('input',()=>$('dBV').textContent=parseFloat(dBS.value).toFixed(1));
 
   $('dTabImg').addEventListener('click',()=>{
     dSrc='image';
-    $('dTabImg').classList.add('on');$('dTabCam').classList.remove('on');
-    $('dImgSrc').style.display='block';$('dCamSrc').style.display='none';
+    $('dTabImg').classList.add('on'); $('dTabCam').classList.remove('on');
+    $('dImgSrc').style.display='block'; $('dCamSrc').style.display='none';
     stopLive(); setEn(!!dSnapped); setTxt('Convert →');
   });
   $('dTabCam').addEventListener('click',()=>{
     dSrc='webcam';
-    $('dTabCam').classList.add('on');$('dTabImg').classList.remove('on');
-    $('dCamSrc').style.display='block';$('dImgSrc').style.display='none';
+    $('dTabCam').classList.add('on'); $('dTabImg').classList.remove('on');
+    $('dCamSrc').style.display='block'; $('dImgSrc').style.display='none';
     setEn(!!dStream); setTxt(dLive?'Stop live':'Convert →');
   });
 
@@ -699,7 +750,11 @@ function doPng(){
     if(!file||!file.type.startsWith('image/')) return;
     const url=URL.createObjectURL(file);
     const img=new Image();
-    img.onload=()=>{dSnapped=img; dThumb.src=url; dPW.style.display='block'; dDZ.style.display='none'; setEn(true);};
+    img.onload=()=>{
+      dSnapped=img;
+      dThumb.src=url; dPW.style.display='block'; dDZ.style.display='none';
+      setEn(true);
+    };
     img.src=url;
   }
   dFI.addEventListener('change',e=>loadFile(e.target.files[0]));
@@ -719,38 +774,49 @@ function doPng(){
     try{
       dStream=await navigator.mediaDevices.getUserMedia({video:{width:1280,height:720}});
       dVid.srcObject=dStream;
-      dCSEl.innerHTML='<span class="ld"></span> Active';
+      dCamSt.innerHTML='<span class="ld"></span> Active';
       $('dStart').disabled=true; $('dSnap').disabled=false; $('dStop').disabled=false;
       setEn(true);
-    }catch{dCSEl.textContent='Access denied';}
+    }catch{dCamSt.textContent='Access denied';}
   });
+
   $('dSnap').addEventListener('click',()=>{
-    if(!dStream) return; stopLive();
+    if(!dStream) return;
+    stopLive();
     const t=document.createElement('canvas');
     t.width=dVid.videoWidth||640; t.height=dVid.videoHeight||360;
     t.getContext('2d').drawImage(dVid,0,0,t.width,t.height);
     const img=new Image();
-    img.onload=()=>{dSnapped=img; dSrc='image'; showOutput(doConvert(img,parseInt(dWS.value),parseFloat(dCS2.value),parseFloat(dBS.value),dInv.checked,dCol.checked,getChars()));};
+    img.onload=()=>{
+      dSnapped=img;
+      /* Switch context to image so getSrc() returns dSnapped */
+      dSrc='image';
+      showOutput(doConvert(img,parseInt(dWS.value),parseFloat(dCS2.value),parseFloat(dBS.value),dInv.checked,dCol.checked,getChars()));
+    };
     img.src=t.toDataURL();
     setTxt('Convert →');
   });
+
   $('dStop').addEventListener('click',()=>{
     stopLive();
     if(dStream){dStream.getTracks().forEach(t=>t.stop());dStream=null;}
-    dVid.srcObject=null; dCSEl.textContent='Stopped';
+    dVid.srcObject=null; dCamSt.textContent='Stopped';
     $('dStart').disabled=false; $('dSnap').disabled=true; $('dStop').disabled=true;
-    setEn(false); setTxt('Convert →');
+    dSnapped=null; setEn(false); setTxt('Convert →');
   });
 
   function runDesk(){
     const src=getSrc(); if(!src) return;
     showOutput(doConvert(src,parseInt(dWS.value),parseFloat(dCS2.value),parseFloat(dBS.value),dInv.checked,dCol.checked,getChars()));
   }
+
   conv.addEventListener('click',()=>{
     if(dSrc==='webcam'&&dStream){
       if(dLive){stopLive();setTxt('Convert →');}
       else{runDesk();dLive=setInterval(runDesk,120);dLB.classList.add('vis');setTxt('Stop live');}
-    } else runDesk();
+    } else {
+      runDesk();
+    }
   });
 
   copy.addEventListener('click',()=>{
@@ -770,28 +836,51 @@ function doPng(){
    MOBILE — isolated scope
 ══════════════════════════════ */
 (function(){
-  let step=0, mImg=null, mStream=null, mLiveInterval=null, mCharset='standard';
-  let mIsLiveMode=false;
+  /* ── STATE ── */
+  let step=0;
+  let mImg=null;           // uploaded/snapped image element
+  let mStream=null;        // active MediaStream
+  let mLiveInterval=null;  // setInterval id for live rendering
+  let mIsLiveMode=false;   // true when camera→live is active
+  let mActiveSource='photo'; // 'photo' | 'camera'  — which tab is selected
+  let mCharset='standard';
 
   const pages=[$('mp1'),$('mp2'),$('mp3')];
   const dots=document.querySelectorAll('.mdot');
   const mBack=$('mBack'), mNext=$('mNext');
+  const mRS=$('mRS'), mRSInner=$('mRSInner');
 
-  /* ── page navigation ── */
+  /* ── updateNext: decide if Next/Convert is enabled ── */
+  function updateNext(){
+    if(step===0){
+      /* Step 0: need either a photo or an active live stream */
+      mNext.disabled = !(mImg || mIsLiveMode);
+    } else {
+      /* Steps 1 and 2: always enabled once we got past step 0 */
+      mNext.disabled = false;
+    }
+  }
+
+  /* ── goTo: animate between pages ── */
   function goTo(n){
+    if(n===step) return;
+    const clampedN=Math.max(0,Math.min(2,n));
     const oldPage=pages[step];
     oldPage.classList.remove('act');
     oldPage.classList.add('prev');
-    setTimeout(()=>oldPage.classList.remove('prev'), 250);
+    const capturedOld=oldPage;
+    setTimeout(()=>capturedOld.classList.remove('prev'), 260);
 
-    step=Math.max(0,Math.min(2,n));
+    step=clampedN;
     pages[step].classList.add('act');
     dots.forEach((d,i)=>d.classList.toggle('act',i===step));
 
     mBack.style.visibility = step===0 ? 'hidden' : 'visible';
+
     if(step===2){
+      /* Result page — hide Next, trigger conversion */
       mNext.style.display='none';
-      runMob();
+      startResultPage();
     } else {
       mNext.style.display='block';
       mNext.textContent = step===1 ? 'Convert' : 'Next';
@@ -799,41 +888,42 @@ function doPng(){
     }
   }
 
-  function updateNext(){
-    // enabled if we have an image OR live camera stream
-    mNext.disabled = !(mImg || (mStream && !mIsLiveMode));
-    // if live mode is active on step 0, Next goes straight to result with live feed
-    if(mIsLiveMode) mNext.disabled=false;
-  }
-
   mBack.addEventListener('click',()=>{
-    if(step===2 && mIsLiveMode){
-      // going back from live result stops the live rendering but keeps stream
-      stopMobLive();
-    }
+    /* Going back from result → stop live loop but keep stream alive */
+    if(step===2) stopMobLive();
     goTo(step-1);
   });
-  mNext.addEventListener('click',()=>goTo(step+1));
+  mNext.addEventListener('click',()=>{
+    if(mNext.disabled) return;
+    goTo(step+1);
+  });
 
-  /* ── source tabs ── */
+  /* ── Source tabs ── */
   $('mTabImg').addEventListener('click',()=>{
+    mActiveSource='photo';
     $('mTabImg').classList.add('on'); $('mTabCam').classList.remove('on');
     $('mImgSrc').style.display='block'; $('mCamSrc').style.display='none';
+    /* BUG FIX: switching to photo tab must clear live mode flag
+       so runMob uses mImg not the video element                */
+    mIsLiveMode=false;
     updateNext();
   });
   $('mTabCam').addEventListener('click',()=>{
+    mActiveSource='camera';
     $('mTabCam').classList.add('on'); $('mTabImg').classList.remove('on');
     $('mCamSrc').style.display='block'; $('mImgSrc').style.display='none';
     updateNext();
   });
 
-  /* ── photo upload ── */
+  /* ── Photo upload ── */
   $('mFI').addEventListener('change',e=>{
     const file=e.target.files[0]; if(!file) return;
     const url=URL.createObjectURL(file);
     const img=new Image();
     img.onload=()=>{
       mImg=img;
+      /* BUG FIX: uploading a photo must also clear live mode */
+      mIsLiveMode=false;
       const th=$('mTh'); th.src=url; th.classList.add('vis');
       $('mDZ').classList.add('ok');
       $('mRR').classList.add('vis');
@@ -841,6 +931,7 @@ function doPng(){
     };
     img.src=url;
   });
+
   $('mRB').addEventListener('click',()=>{
     mImg=null;
     $('mTh').classList.remove('vis'); $('mDZ').classList.remove('ok');
@@ -848,12 +939,14 @@ function doPng(){
     updateNext();
   });
 
-  /* ── webcam ── */
+  /* ── Camera ── */
   $('mStart').addEventListener('click',async()=>{
     try{
-      mStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:1280},height:{ideal:720}}});
+      mStream=await navigator.mediaDevices.getUserMedia({
+        video:{facingMode:'environment',width:{ideal:1280},height:{ideal:720}}
+      });
       $('mVid').srcObject=mStream;
-      $('mCS').innerHTML='<span class="ld"></span> Camera ready — tap Go Live for live ASCII';
+      $('mCS').innerHTML='<span class="ld"></span> Camera ready — tap Go Live';
       $('mStart').disabled=true;
       $('mLiveBtn').disabled=false;
       $('mStopC').disabled=false;
@@ -863,20 +956,21 @@ function doPng(){
     }
   });
 
-  /* ── GO LIVE button ── */
   $('mLiveBtn').addEventListener('click',()=>{
     if(!mStream) return;
     mIsLiveMode=true;
     $('mLiveBtn').classList.add('live-on');
     $('mLiveBtn').textContent='● Live';
-    $('mCS').innerHTML='<span class="ld"></span> Live ASCII active';
+    $('mCS').innerHTML='<span class="ld"></span> Live mode active';
     updateNext();
-    // jump straight to result page and start live loop
+    /* Jump straight to result */
     goTo(2);
   });
 
   $('mStopC').addEventListener('click',()=>{
+    /* Stop live rendering and kill the stream */
     stopMobLive();
+    mIsLiveMode=false;
     if(mStream){mStream.getTracks().forEach(t=>t.stop());mStream=null;}
     $('mVid').srcObject=null;
     $('mCS').textContent='Camera stopped';
@@ -885,7 +979,6 @@ function doPng(){
     $('mLiveBtn').classList.remove('live-on');
     $('mLiveBtn').textContent='Go Live';
     $('mStopC').disabled=true;
-    mIsLiveMode=false;
     updateNext();
   });
 
@@ -894,7 +987,7 @@ function doPng(){
     $('mLiveBadge').classList.remove('vis');
   }
 
-  /* ── charset ── */
+  /* ── Charset ── */
   document.querySelectorAll('.mp2[data-mcs]').forEach(b=>{
     b.addEventListener('click',()=>{
       document.querySelectorAll('.mp2[data-mcs]').forEach(x=>x.classList.remove('on'));
@@ -910,44 +1003,38 @@ function doPng(){
     return CS[mCharset]||CS.standard;
   }
 
-  /* ── get appropriate char width from source dimensions ──
-     We target a fixed output width in chars that preserves the
-     source's own aspect ratio. The height is always derived
-     from width * (srcH/srcW) * 0.45 inside doConvert().
-     For mobile we use 80 chars as the base width — wide enough
-     to see detail but fast enough to render.                    */
-  function getMobWidth(src){
-    // use a fixed mobile width — aspect ratio is handled inside doConvert
-    return 80;
-  }
-
-  /* ── run conversion ── */
-  function runMob(){
-    // choose source: live camera or snapped/uploaded image
-    const src = mIsLiveMode ? $('mVid') : mImg;
-    if(!src){$('mPH').style.display='flex';return;}
-
-    // if live mode, start interval
-    if(mIsLiveMode){
+  /* ── Result page ── */
+  function startResultPage(){
+    /* Determine which source to use based on state flags,
+       not on which tab is visually active — this is the fix
+       for Bug #2: after Camera→Live, switching to photo tab
+       sets mIsLiveMode=false and mActiveSource='photo'       */
+    if(mIsLiveMode && mStream){
+      /* Live camera mode */
       $('mLiveBadge').classList.add('vis');
-      // initial frame
-      renderMob(src);
-      // keep rendering at ~8fps (120ms)
+      /* Initial render */
+      renderMob($('mVid'));
+      /* Start loop */
       if(!mLiveInterval){
-        mLiveInterval=setInterval(()=>renderMob($('mVid')), 120);
+        mLiveInterval=setInterval(()=>{
+          if($('mVid').readyState>=2) renderMob($('mVid'));
+        }, 120);
       }
-    } else {
-      stopMobLive();
+    } else if(mImg){
+      /* Still image */
       $('mLiveBadge').classList.remove('vis');
-      renderMob(src);
+      stopMobLive();
+      renderMob(mImg);
+    } else {
+      /* No source — show placeholder */
+      $('mPH').style.display='flex';
     }
   }
 
   function renderMob(src){
     $('mPH').style.display='none';
     const res=doConvert(
-      src,
-      getMobWidth(src),
+      src, 80,
       parseFloat($('mCS2').value),
       parseFloat($('mBS').value),
       $('mInv').checked,
@@ -958,12 +1045,16 @@ function doPng(){
     if($('mCol').checked){mao.classList.add('col');mao.innerHTML=res.html;}
     else{mao.classList.remove('col');mao.textContent=res.plain;}
     mao.style.display='block';
+
+    /* Center ASCII when content fits, scroll when it overflows */
+    mRS.classList.add('has-content');
+
     $('mDim').textContent=`${res.cw}×${res.ch}`;
     $('mPng').disabled=false;
     $('mSaveTxt').disabled=false;
   }
 
-  /* ── result actions ── */
+  /* ── Result actions ── */
   $('mCopy').addEventListener('click',()=>{
     if(!lastPlain) return;
     navigator.clipboard.writeText(lastPlain).then(()=>{
